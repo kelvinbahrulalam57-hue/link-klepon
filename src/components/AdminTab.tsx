@@ -3,9 +3,11 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import * as Icons from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
+import { collection, query, orderBy, onSnapshot, deleteDoc, doc } from 'firebase/firestore';
+import { db } from '../firebase.ts';
 
 interface AdminTabProps {
   isTwoFactorEnabled: boolean;
@@ -49,6 +51,56 @@ export default function AdminTab({
   const [isUnlocked, setIsUnlocked] = useState(false);
   const [passwordInput, setPasswordInput] = useState('');
   const [errorMessage, setErrorMessage] = useState('');
+
+  // Visitor Feedbacks States & Real-time Sync
+  interface FeedbackItem {
+    id: string;
+    name: string;
+    rating: number;
+    feedback: string;
+    createdAt?: any;
+  }
+  const [feedbacks, setFeedbacks] = useState<FeedbackItem[]>([]);
+  const [feedbacksLoading, setFeedbacksLoading] = useState(true);
+
+  useEffect(() => {
+    if (!isUnlocked) return;
+
+    setFeedbacksLoading(true);
+    const q = query(collection(db, 'feedbacks'), orderBy('createdAt', 'desc'));
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const items: FeedbackItem[] = [];
+      snapshot.forEach((docSnap) => {
+        const data = docSnap.data();
+        items.push({
+          id: docSnap.id,
+          name: data.name || 'Anonim',
+          rating: data.rating || 5,
+          feedback: data.feedback || '',
+          createdAt: data.createdAt,
+        });
+      });
+      setFeedbacks(items);
+      setFeedbacksLoading(false);
+    }, (err) => {
+      console.error("Error listening to feedbacks:", err);
+      setFeedbacksLoading(false);
+    });
+
+    return () => unsubscribe();
+  }, [isUnlocked]);
+
+  const handleDeleteFeedback = async (id: string) => {
+    const yes = window.confirm("Apakah Anda yakin ingin menghapus ulasan/saran ini?");
+    if (!yes) return;
+
+    try {
+      await deleteDoc(doc(db, 'feedbacks', id));
+      onTriggerPushNotification("Ulasan Dihapus 🗑", "Ulasan pengunjung berhasil dihapus secara permanen.");
+    } catch (err) {
+      console.error("Error deleting feedback:", err);
+    }
+  };
 
   // 2FA mock verification
   const [otpInput, setOtpInput] = useState('');
@@ -544,6 +596,104 @@ export default function AdminTab({
             ) : (
               <div className="text-xs text-slate-500 bg-[#070d1a] border border-slate-900 rounded-lg p-3 text-center">
                 Sistem Penyamaran dinonaktifkan. Aktifkan saklar diatas untuk melindungi privasi halaman Anda.
+              </div>
+            )}
+          </div>
+
+          {/* 6. ULASAN & SARAN PENGUNJUNG (REAL-TIME) */}
+          <div className="bg-[#0b1329] border border-cyan-500/10 rounded-xl p-5 shadow-xl space-y-4">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-800/80 pb-3">
+              <h3 className="text-sm font-semibold tracking-wide text-slate-300 flex items-center gap-2">
+                <Icons.MessageSquareDashed className="w-4 h-4 text-cyan-400" />
+                LOG ULASAN & SARAN PENGUNJUNG (REAL-TIME)
+              </h3>
+              <div className="flex items-center gap-2">
+                <span className="text-[10px] bg-cyan-500/10 text-cyan-400 px-2 py-0.5 rounded font-mono font-bold">
+                  DATABASE: ACTIVE
+                </span>
+                <span className="animate-ping inline-block w-2 h-2 rounded-full bg-emerald-400" />
+              </div>
+            </div>
+
+            {/* Stats Overview */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div className="bg-[#070d1a] border border-slate-800 p-3 rounded-lg flex items-center justify-between">
+                <div>
+                  <span className="text-[9px] font-black text-slate-500 uppercase tracking-widest block">TOTAL ULASAN</span>
+                  <span className="text-xl font-mono font-black text-white">{feedbacks.length} Pesan</span>
+                </div>
+                <Icons.MessageSquare className="w-8 h-8 text-cyan-500/20" />
+              </div>
+              <div className="bg-[#070d1a] border border-slate-800 p-3 rounded-lg flex items-center justify-between">
+                <div>
+                  <span className="text-[9px] font-black text-slate-500 uppercase tracking-widest block">RATA-RATA RATING</span>
+                  <div className="flex items-center gap-1.5 mt-0.5">
+                    <span className="text-xl font-mono font-black text-white">
+                      {feedbacks.length > 0 
+                        ? (feedbacks.reduce((acc, curr) => acc + curr.rating, 0) / feedbacks.length).toFixed(1) 
+                        : "0.0"}
+                    </span>
+                    <Icons.Star className="w-4 h-4 text-amber-400 fill-amber-400" />
+                  </div>
+                </div>
+                <Icons.TrendingUp className="w-8 h-8 text-cyan-500/20" />
+              </div>
+            </div>
+
+            {feedbacksLoading ? (
+              <div className="text-center py-8 text-xs text-slate-500 font-mono animate-pulse flex items-center justify-center gap-2">
+                <Icons.Loader2 className="w-4 h-4 animate-spin text-cyan-400" />
+                <span>Menghubungkan ke basis data cloud...</span>
+              </div>
+            ) : feedbacks.length === 0 ? (
+              <div className="text-center py-10 bg-[#070d1a]/50 border border-slate-900 rounded-lg text-xs text-slate-500 italic">
+                Belum ada ulasan atau saran dari pengunjung. Form tersedia di LandingPage.
+              </div>
+            ) : (
+              <div className="space-y-2 max-h-[350px] overflow-y-auto pr-1.5 custom-scrollbar">
+                {feedbacks.map((item) => (
+                  <div 
+                    key={item.id} 
+                    className="bg-[#070d1a] border border-slate-800/80 hover:border-cyan-500/20 p-3.5 rounded-lg flex items-start justify-between gap-3 transition-colors relative text-left"
+                  >
+                    <div className="space-y-1.5 flex-1">
+                      <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1">
+                        <span className="text-xs font-black text-cyan-300 font-mono">{item.name}</span>
+                        <div className="flex gap-0.5">
+                          {Array.from({ length: 5 }).map((_, i) => (
+                            <Icons.Star 
+                              key={i} 
+                              className={`w-3 h-3 ${
+                                i < item.rating 
+                                  ? 'text-amber-400 fill-amber-400' 
+                                  : 'text-slate-700'
+                              }`} 
+                            />
+                          ))}
+                        </div>
+                        <span className="text-[9px] text-slate-500 font-mono">
+                          {item.createdAt?.seconds 
+                            ? new Date(item.createdAt.seconds * 1000).toLocaleString('id-ID', {
+                                day: '2-digit',
+                                month: 'short',
+                                hour: '2-digit',
+                                minute: '2-digit'
+                              })
+                            : 'Baru saja'}
+                        </span>
+                      </div>
+                      <p className="text-xs text-slate-300 leading-relaxed break-words">{item.feedback}</p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => handleDeleteFeedback(item.id)}
+                      className="p-1.5 hover:bg-rose-500/10 border border-transparent hover:border-rose-500/20 rounded-md text-slate-500 hover:text-rose-400 cursor-pointer transition-colors"
+                      title="Hapus Ulasan"
+                    >
+                      <Icons.Trash2 className="w-4 h-4" />
+                    </button>
+                  </div>
+                ))}
               </div>
             )}
           </div>

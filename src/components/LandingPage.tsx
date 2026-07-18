@@ -8,6 +8,8 @@ import { ProfileData, ThemeConfig, LinkItem } from '../types.ts';
 import * as Icons from 'lucide-react';
 import LKLogo from './LKLogo.tsx';
 import EntranceAnimation from './EntranceAnimation.tsx';
+import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
+import { db } from '../firebase.ts';
 
 import { motion, AnimatePresence } from 'motion/react';
 
@@ -91,8 +93,44 @@ export default function LandingPage({
   const [passwordInput, setPasswordInput] = useState('');
   const [loginError, setLoginError] = useState('');
   const [showPassword, setShowPassword] = useState(false);
-  const [showQRModal, setShowQRModal] = useState(false);
-  const [copiedUrl, setCopiedUrl] = useState(false);
+
+  // Feedback / Suggestion Form States
+  const [feedbackName, setFeedbackName] = useState('');
+  const [feedbackRating, setFeedbackRating] = useState(5);
+  const [feedbackText, setFeedbackText] = useState('');
+  const [feedbackLoading, setFeedbackLoading] = useState(false);
+  const [feedbackSuccess, setFeedbackSuccess] = useState(false);
+  const [feedbackError, setFeedbackError] = useState('');
+
+  const handleFeedbackSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!feedbackText.trim()) {
+      setFeedbackError('Pesan ulasan atau saran tidak boleh kosong.');
+      return;
+    }
+
+    setFeedbackLoading(true);
+    setFeedbackError('');
+    setFeedbackSuccess(false);
+
+    try {
+      await addDoc(collection(db, 'feedbacks'), {
+        name: feedbackName.trim() || 'Anonim',
+        rating: feedbackRating,
+        feedback: feedbackText.trim(),
+        createdAt: serverTimestamp(),
+      });
+      setFeedbackSuccess(true);
+      setFeedbackText('');
+      setFeedbackName('');
+      setFeedbackRating(5);
+    } catch (err: any) {
+      console.error("Error submitting feedback:", err);
+      setFeedbackError('Gagal mengirim ulasan/saran. Silakan coba lagi.');
+    } finally {
+      setFeedbackLoading(false);
+    }
+  };
 
   // New Shooting Theme States
   interface ShotRipple {
@@ -593,34 +631,118 @@ export default function LandingPage({
           )}
         </div>
 
-        {/* Feature widgets (Image 5 style bento blocks) */}
+        {/* Review / Suggestion Box Form Card */}
         {!(isStealthTriggered && stealthElementsToHide.includes('widgets')) && (
           <>
-            <div className="w-full max-w-md mt-12 grid grid-cols-2 gap-3">
-              <div className="bg-slate-950/65 border border-cyan-500/10 p-3.5 rounded-xl backdrop-blur-sm text-center">
-                <Icons.BookOpen className="w-5 h-5 text-cyan-400 mx-auto mb-1.5" />
-                <h5 className="text-[10px] font-black text-cyan-300 uppercase tracking-widest">ARTIKEL GAME</h5>
-                <p className="text-[9px] text-slate-400 leading-relaxed mt-0.5">Info, tips, dan update baru seputar Klepon.</p>
+            <div className="w-full max-w-md mt-12 bg-slate-950/65 border border-cyan-500/20 p-5 rounded-2xl backdrop-blur-md shadow-[0_0_25px_rgba(6,182,212,0.1)] relative text-left">
+              {/* Cyber retro decorative element */}
+              <div className="absolute top-0 inset-x-0 h-[2px] bg-gradient-to-r from-cyan-500 via-indigo-500 to-cyan-500 rounded-t-2xl" />
+              
+              <div className="flex items-center gap-2 mb-4">
+                <div className="p-2 bg-cyan-500/10 border border-cyan-500/30 rounded-lg text-cyan-400">
+                  <Icons.MessageSquareQuote className="w-5 h-5" />
+                </div>
+                <div>
+                  <h4 className="text-xs font-black tracking-widest text-cyan-300 uppercase">KOTAK ULASAN & SARAN</h4>
+                  <p className="text-[9px] text-slate-400 uppercase tracking-widest font-semibold mt-0.5">Sampaikan pesan langsung ke admin</p>
+                </div>
               </div>
-              <div className="bg-slate-950/65 border border-rose-500/10 p-3.5 rounded-xl backdrop-blur-sm text-center">
-                <Icons.CalendarDays className="w-5 h-5 text-rose-400 mx-auto mb-1.5" />
-                <h5 className="text-[10px] font-black text-rose-300 uppercase tracking-widest">EVENT JADWAL</h5>
-                <p className="text-[9px] text-slate-400 leading-relaxed mt-0.5">Jadwal event menarik dan kesempatan emas.</p>
-              </div>
-            </div>
 
-            {/* Trust features (Image 5 style full width indicators) */}
-            <div className="w-full max-w-md mt-3 grid grid-cols-2 gap-3">
-              <div className="bg-slate-950/65 border border-amber-500/10 p-3.5 rounded-xl backdrop-blur-sm text-center">
-                <Icons.Info className="w-5 h-5 text-amber-400 mx-auto mb-1.5" />
-                <h5 className="text-[10px] font-black text-amber-300 uppercase tracking-widest">INFO TERLENGKAP</h5>
-                <p className="text-[9px] text-slate-400 leading-relaxed mt-0.5">Semua info Klepon ada di sini.</p>
-              </div>
-              <div className="bg-slate-950/65 border border-emerald-500/10 p-3.5 rounded-xl backdrop-blur-sm text-center">
-                <Icons.ShieldCheck className="w-5 h-5 text-emerald-400 mx-auto mb-1.5" />
-                <h5 className="text-[10px] font-black text-emerald-300 uppercase tracking-widest">TERPERCAYA</h5>
-                <p className="text-[9px] text-slate-400 leading-relaxed mt-0.5">Resmi, akurat, dan dapat diandalkan.</p>
-              </div>
+              {feedbackSuccess ? (
+                <motion.div 
+                  initial={{ opacity: 0, scale: 0.95 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  className="bg-emerald-500/10 border border-emerald-500/20 rounded-xl p-4 text-center space-y-2.5 my-4"
+                >
+                  <Icons.CheckCircle2 className="w-10 h-10 text-emerald-400 mx-auto animate-bounce" />
+                  <h5 className="text-xs font-black text-emerald-400 uppercase tracking-wider">PESAN TERKIRIM SECARA REAL-TIME!</h5>
+                  <p className="text-[10px] text-slate-300 leading-relaxed">
+                    Ulasan atau saran Anda telah berhasil disimpan langsung di database cloud dan diterima langsung oleh admin Kelvin Bahrul Alam. Terima kasih!
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() => setFeedbackSuccess(false)}
+                    className="px-4 py-1.5 bg-emerald-500 hover:bg-emerald-600 text-slate-950 text-[10px] font-extrabold rounded-lg transition-colors mt-2 uppercase cursor-pointer"
+                  >
+                    Kirim Pesan Lain
+                  </button>
+                </motion.div>
+              ) : (
+                <form onSubmit={handleFeedbackSubmit} className="space-y-3.5">
+                  {/* Name / Contact input */}
+                  <div className="space-y-1">
+                    <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest block">NAMA / SOCIAL MEDIA TAG (OPSIONAL)</label>
+                    <input
+                      type="text"
+                      value={feedbackName}
+                      onChange={(e) => setFeedbackName(e.target.value)}
+                      placeholder="Contoh: Kelvin / @kelvin57"
+                      className="w-full bg-[#070b13]/80 border-2 border-slate-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-cyan-500/80 transition-all placeholder:text-slate-600"
+                    />
+                  </div>
+
+                  {/* Star rating selector */}
+                  <div className="space-y-1">
+                    <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest block">BERIKAN RATING (BINTANG)</label>
+                    <div className="flex gap-1.5 pt-0.5">
+                      {[1, 2, 3, 4, 5].map((star) => (
+                        <button
+                          key={star}
+                          type="button"
+                          onClick={() => setFeedbackRating(star)}
+                          className="p-1 hover:scale-110 transition-transform cursor-pointer"
+                          title={`${star} Bintang`}
+                        >
+                          <Icons.Star 
+                            className={`w-6 h-6 transition-all ${
+                              star <= feedbackRating 
+                                ? 'text-amber-400 fill-amber-400 filter drop-shadow-[0_0_4px_rgba(245,158,11,0.5)]' 
+                                : 'text-slate-600'
+                            }`}
+                          />
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Suggestion Textarea */}
+                  <div className="space-y-1">
+                    <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest block">ULASAN / SARAN ANDA</label>
+                    <textarea
+                      rows={3}
+                      value={feedbackText}
+                      onChange={(e) => setFeedbackText(e.target.value)}
+                      placeholder="Tuliskan masukan atau ulasan Anda di sini..."
+                      className="w-full bg-[#070b13]/80 border-2 border-slate-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-cyan-500/80 transition-all placeholder:text-slate-600 resize-none"
+                    />
+                  </div>
+
+                  {feedbackError && (
+                    <div className="text-[9px] font-black text-rose-400 uppercase tracking-wider bg-rose-500/10 border border-rose-500/20 py-2 px-3 rounded-lg flex items-center gap-1.5">
+                      <Icons.XCircle className="w-3.5 h-3.5 shrink-0" />
+                      <span>{feedbackError}</span>
+                    </div>
+                  )}
+
+                  <button
+                    type="submit"
+                    disabled={feedbackLoading}
+                    className="w-full py-2.5 bg-gradient-to-r from-cyan-400 to-indigo-500 hover:from-cyan-500 hover:to-indigo-600 text-slate-950 text-xs font-black rounded-xl transition-all cursor-pointer flex items-center justify-center gap-2 shadow-[0_0_15px_rgba(6,182,212,0.15)] hover:shadow-[0_0_25px_rgba(6,182,212,0.35)] disabled:opacity-50"
+                  >
+                    {feedbackLoading ? (
+                      <>
+                        <Icons.Loader2 className="w-3.5 h-3.5 animate-spin" />
+                        <span>MENGIRIM PESAN...</span>
+                      </>
+                    ) : (
+                      <>
+                        <Icons.Send className="w-3.5 h-3.5" />
+                        <span>KIRIM ULASAN & SARAN SEKARANG</span>
+                      </>
+                    )}
+                  </button>
+                </form>
+              )}
             </div>
 
             {/* Tech tagline bar (Image 5 style) */}
@@ -1028,114 +1150,6 @@ export default function LandingPage({
                   <Icons.Save className="w-3.5 h-3.5" />
                   Simpan Perubahan
                 </button>
-              </div>
-            </motion.div>
-          </>
-        )}
-      </AnimatePresence>
-
-      {/* Floating QR Code/Barcode Button */}
-      <div className="fixed bottom-4 right-4 z-40">
-        <button
-          onClick={(e) => {
-            e.stopPropagation();
-            setShowQRModal(true);
-          }}
-          className="w-12 h-12 rounded-full bg-slate-950/90 hover:bg-slate-900 border-2 border-cyan-500/30 hover:border-cyan-400 text-cyan-400 hover:text-white shadow-[0_0_15px_rgba(6,182,212,0.4)] hover:shadow-[0_0_25px_rgba(6,182,212,0.6)] backdrop-blur-md cursor-pointer transition-all duration-300 flex items-center justify-center group active:scale-95"
-          title="Tampilkan QR Code & Barcode Website"
-        >
-          <Icons.QrCode className="w-5 h-5 group-hover:rotate-12 transition-transform duration-300" />
-        </button>
-      </div>
-
-      {/* QR Code & Barcode Modal */}
-      <AnimatePresence>
-        {showQRModal && (
-          <>
-            {/* Backdrop */}
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 0.85 }}
-              exit={{ opacity: 0 }}
-              className="fixed inset-0 bg-slate-950/90 z-50 backdrop-blur-md flex items-center justify-center p-4"
-              onClick={() => setShowQRModal(false)}
-            />
-
-            {/* Modal Box */}
-            <motion.div
-              initial={{ opacity: 0, scale: 0.9, y: 30 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.9, y: 30 }}
-              transition={{ type: "spring", damping: 25, stiffness: 350 }}
-              className="fixed inset-auto z-[60] w-full max-w-sm bg-[#050914] border-2 border-cyan-500/30 rounded-2xl p-6 shadow-[0_0_50px_rgba(6,182,212,0.3)] overflow-hidden text-center select-none"
-              onClick={(e) => e.stopPropagation()}
-            >
-              {/* Corner brackets */}
-              <div className="absolute inset-3 border border-cyan-500/10 pointer-events-none z-0">
-                <div className="absolute top-0 left-0 w-4 h-4 border-t-2 border-l-2 border-cyan-400/40" />
-                <div className="absolute top-0 right-0 w-4 h-4 border-t-2 border-r-2 border-cyan-400/40" />
-                <div className="absolute bottom-0 left-0 w-4 h-4 border-b-2 border-l-2 border-cyan-400/40" />
-                <div className="absolute bottom-0 right-0 w-4 h-4 border-b-2 border-r-2 border-cyan-400/40" />
-              </div>
-
-              {/* Energy beam header */}
-              <div className="absolute top-0 left-0 right-0 h-1.5 bg-gradient-to-r from-cyan-500 via-purple-500 to-rose-500 animate-pulse" />
-
-              <div className="relative z-10 flex flex-col items-center space-y-4">
-                <div className="space-y-1">
-                  <h4 className="text-xs font-black tracking-[0.3em] text-cyan-400 uppercase font-mono">WEBSITE QR & BARCODE</h4>
-                  <p className="text-[9px] text-slate-400 uppercase tracking-widest font-black">Bagikan & Pindai Tautan Resmi</p>
-                </div>
-
-                {/* QR Code */}
-                <div className="bg-white p-3 rounded-xl shadow-[0_0_20px_rgba(6,182,212,0.15)] border border-cyan-500/20 inline-block">
-                  <img
-                    src={`https://api.qrserver.com/v1/create-qr-code/?size=180x180&color=090d16&bgcolor=ffffff&qzone=1&data=${encodeURIComponent(window.location.href)}`}
-                    alt="Link Klepon QR Code"
-                    className="w-36 h-36 object-contain"
-                    referrerPolicy="no-referrer"
-                  />
-                </div>
-
-                <div className="w-full border-t border-dashed border-slate-800 my-1 relative">
-                  <div className="absolute -left-[31px] -top-[8px] w-4 h-4 bg-[#050914] border-r border-cyan-500/20 rounded-full" />
-                  <div className="absolute -right-[31px] -top-[8px] w-4 h-4 bg-[#050914] border-l border-cyan-500/20 rounded-full" />
-                </div>
-
-                {/* Barcode */}
-                <div className="bg-white p-2.5 rounded-lg w-full max-w-[240px] flex items-center justify-center">
-                  <img
-                    src={`https://bwipjs-api.metafloor.com/?bcid=code128&text=${encodeURIComponent(window.location.href)}&scale=2&rotate=N&includetext`}
-                    alt="Link Klepon Barcode"
-                    className="h-12 max-w-full object-contain"
-                    referrerPolicy="no-referrer"
-                  />
-                </div>
-
-                <p className="text-[10px] text-slate-400 max-w-xs leading-relaxed font-semibold">
-                  Tunjukkan kode di atas kepada teman atau kamera ponsel untuk mengakses <span className="text-cyan-400 font-bold">Link Klepon</span> secara instan.
-                </p>
-
-                {/* Buttons */}
-                <div className="flex gap-2 w-full pt-1">
-                  <button
-                    onClick={() => {
-                      navigator.clipboard.writeText(window.location.href);
-                      setCopiedUrl(true);
-                      setTimeout(() => setCopiedUrl(false), 2000);
-                    }}
-                    className="flex-1 py-2 bg-[#121c33] hover:bg-slate-800 border border-slate-700 text-slate-200 font-bold text-xs rounded-lg transition-colors cursor-pointer flex items-center justify-center gap-1"
-                  >
-                    {copiedUrl ? <Icons.Check className="w-3.5 h-3.5 text-emerald-400" /> : <Icons.Copy className="w-3.5 h-3.5 text-cyan-400" />}
-                    <span>{copiedUrl ? "Disalin!" : "Salin Link"}</span>
-                  </button>
-                  <button
-                    onClick={() => setShowQRModal(false)}
-                    className="px-4 py-2 bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/30 text-rose-400 font-bold text-xs rounded-lg transition-colors cursor-pointer"
-                  >
-                    Tutup
-                  </button>
-                </div>
               </div>
             </motion.div>
           </>

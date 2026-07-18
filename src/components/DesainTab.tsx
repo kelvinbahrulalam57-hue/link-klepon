@@ -298,6 +298,69 @@ export default function DesainTab({ theme, onChange, adminStyle, onAdminStyleCha
           </div>
         </div>
 
+        {/* Upload Custom Background from Device / Gallery */}
+        <div className="pt-2">
+          <label className="block text-xs text-slate-400 mb-2 font-medium">Atau Unggah Gambar dari Galeri HP / Google Foto Anda:</label>
+          <div className="flex flex-col gap-2">
+            <label className="flex flex-col items-center justify-center gap-2 px-4 py-5 bg-[#121c33]/40 hover:bg-[#162544] border-2 border-dashed border-slate-700 hover:border-cyan-500/50 rounded-xl text-xs font-bold text-slate-300 cursor-pointer transition-all text-center">
+              <Icons.UploadCloud className="w-7 h-7 text-cyan-400 animate-pulse" />
+              <span className="font-extrabold uppercase tracking-wide text-cyan-300 text-[10px]">Pilih Foto dari Galeri / Google Foto</span>
+              <span className="text-[10px] text-slate-500 font-normal">Mendukung format JPG, PNG, WEBP, GIF</span>
+              <input
+                type="file"
+                accept="image/*"
+                className="hidden"
+                onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  if (file) {
+                    const reader = new FileReader();
+                    reader.onloadend = () => {
+                      if (typeof reader.result === 'string') {
+                        onChange({
+                          ...theme,
+                          backgroundType: 'image',
+                          backgroundValue: reader.result
+                        });
+                      }
+                    };
+                    reader.readAsDataURL(file);
+                  }
+                }}
+              />
+            </label>
+
+            {theme.backgroundType === 'image' && theme.backgroundValue?.startsWith('data:image/') && (
+              <div className="flex items-center justify-between text-xs bg-[#070b13] border border-slate-800 p-3 rounded-lg animate-fade-in">
+                <div className="flex items-center gap-2">
+                  <div className="w-8 h-8 rounded border border-slate-800 overflow-hidden shrink-0">
+                    <img src={theme.backgroundValue} alt="Uploaded bg" className="w-full h-full object-cover" />
+                  </div>
+                  <div>
+                    <span className="text-emerald-400 font-extrabold text-[10px] uppercase tracking-wider flex items-center gap-1">
+                      <Icons.CheckCircle2 className="w-3.5 h-3.5" />
+                      Latar Belakang Kustom Aktif ✓
+                    </span>
+                    <span className="text-[9px] text-slate-500 font-mono block">Format: Base64 DataURI</span>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    onChange({
+                      ...theme,
+                      backgroundType: 'gradient',
+                      backgroundValue: 'linear-gradient(135deg, #090d16 0%, #050810 100%)'
+                    });
+                  }}
+                  className="px-2.5 py-1.5 bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 hover:text-rose-300 text-[10px] font-bold rounded-lg border border-rose-500/10 cursor-pointer transition-colors"
+                >
+                  Reset Gambar
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {/* Custom image url */}
           <div>
