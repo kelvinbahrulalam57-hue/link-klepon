@@ -376,7 +376,7 @@ export default function EntranceAnimation({
 
         {/* 4. CHROME GLITCH GREETING TITLE */}
         <div className="h-16 mb-1 flex items-center justify-center w-full">
-          <h1 className="text-2xl md:text-3xl font-black tracking-[0.25em] text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 via-white to-rose-500 drop-shadow-[0_0_20px_rgba(6,182,212,0.45)] uppercase font-mono relative">
+          <h1 className="text-2xl md:text-3xl font-black tracking-[0.25em] text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 via-white to-rose-500 drop-shadow-[0_0_20px_rgba(6,182,212,0.45)] uppercase font-gaming relative">
             {typedTitle}
             <span className="w-3 h-7 bg-cyan-400 inline-block align-middle ml-1 animate-pulse" />
           </h1>

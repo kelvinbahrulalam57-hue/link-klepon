@@ -146,6 +146,150 @@ export default function LandingPage({
   const [isInputFocused, setIsInputFocused] = useState(false);
   const [isShaking, setIsShaking] = useState(false);
 
+  // Terminal Custom States & Logic
+  const [terminalInput, setTerminalInput] = useState('');
+  const [terminalLogs, setTerminalLogs] = useState<string[]>([
+    'LK-OS v4.2 INITIALIZED [OK]',
+    'SECURE CONNECTION ESTABLISHED DIRECTLY WITH CLOUD FIRESTORE.',
+    'Ketik /help untuk daftar perintah interaktif.'
+  ]);
+  const [isScanning, setIsScanning] = useState(false);
+  const [scanProgress, setScanProgress] = useState(0);
+  const [scanFinished, setScanFinished] = useState(false);
+  const [liveVisitorCount, setLiveVisitorCount] = useState(() => Math.floor(Math.random() * 120) + 480);
+
+  // Live Clock effect
+  const [liveTime, setLiveTime] = useState(() => new Date().toLocaleTimeString('id-ID'));
+  const [systemUptime, setSystemUptime] = useState(0);
+
+  // Link Search & Category Filter States
+  const [searchQuery, setSearchQuery] = useState('');
+  const [selectedCategory, setSelectedCategory] = useState('Semua');
+
+  // Dynamic lists computed for search and categories
+  const categories = React.useMemo(() => {
+    const cats = new Set<string>();
+    filteredLinks.forEach(l => {
+      if (l.category && l.category.trim()) {
+        cats.add(l.category.trim());
+      }
+    });
+    return ['Semua', ...Array.from(cats)];
+  }, [filteredLinks]);
+
+  const searchFilteredLinks = React.useMemo(() => {
+    return filteredLinks.filter(l => {
+      const matchesSearch = l.title.toLowerCase().includes(searchQuery.toLowerCase()) || 
+                            (l.category && l.category.toLowerCase().includes(searchQuery.toLowerCase()));
+      const matchesCategory = selectedCategory === 'Semua' || l.category === selectedCategory;
+      return matchesSearch && matchesCategory;
+    });
+  }, [filteredLinks, searchQuery, selectedCategory]);
+
+  React.useEffect(() => {
+    const timer = setInterval(() => {
+      setLiveTime(new Date().toLocaleTimeString('id-ID'));
+      setSystemUptime((prev) => prev + 1);
+    }, 1000);
+    return () => clearInterval(timer);
+  }, []);
+
+  // Auto scroll terminal logs
+  const terminalLogsEndRef = React.useRef<HTMLDivElement | null>(null);
+  React.useEffect(() => {
+    if (terminalLogsEndRef.current) {
+      terminalLogsEndRef.current.scrollIntoView({ behavior: 'smooth' });
+    }
+  }, [terminalLogs]);
+
+  // Handle command input
+  const handleTerminalSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    const command = terminalInput.trim().toLowerCase();
+    if (!command) return;
+
+    const newLogs = [...terminalLogs, `visitor@klepon-nexus:~$ ${terminalInput}`];
+    
+    if (command === '/help') {
+      newLogs.push(
+        'PERINTAH YANG TERSEDIA:',
+        '  /about   - Informasi tentang portal Website Klepon',
+        '  /links   - Tampilkan daftar tautan aktif saat ini',
+        '  /joke    - Dapatkan lelucon gaming/cyber acak',
+        '  /ping    - Periksa latensi koneksi real-time Anda',
+        '  /clear   - Bersihkan riwayat konsol terminal',
+        '  /secret  - Aktifkan pesan tersembunyi admin'
+      );
+    } else if (command === '/about') {
+      newLogs.push(
+        'TENTANG WEBSITE KLEPON:',
+        '  Gerbang utama multi-tautan resmi yang dirancang oleh Kelvin Bahrul Alam.',
+        '  Menggunakan teknologi modern React 19, Tailwind CSS v4, dan Firebase.'
+      );
+    } else if (command === '/links') {
+      newLogs.push(
+        'DAFTAR TAUTAN AKTIF:',
+        ...filteredLinks.map((l, idx) => `  [${idx + 1}] ${l.title} (${l.category || 'Tautan'})`)
+      );
+    } else if (command === '/joke') {
+      const jokes = [
+        "Kenapa pahlawan ML susah dapet pacar? Karena kerjaannya selalu nge-push!",
+        "Bagaimana cara para gamer mendekati lawan jenis? Lewat jalur top-up kasih skin legendaris!",
+        "Kenapa server game selalu down waktu hari libur? Karena servernya juga butuh refreshing!",
+        "Pemain game apa yang paling sabar? Pemain yang heronya di-nerf terus tapi tetap setia main!"
+      ];
+      newLogs.push(`LELUCON GAMING: "${jokes[Math.floor(Math.random() * jokes.length)]}"`);
+    } else if (command === '/ping') {
+      newLogs.push(`PONG! Latensi Anda saat ini adalah ${Math.floor(Math.random() * 15) + 12}ms (Sangat Stabil/Hijau)`);
+    } else if (command === '/clear') {
+      setTerminalLogs([]);
+      setTerminalInput('');
+      return;
+    } else if (command === '/secret') {
+      newLogs.push(
+        '🔓 PROTOKOL RAHASIA DIAKTIFKAN!',
+        '  "Semua informasi Klepon sudah ada di sini. Stay secure, main game dengan sehat!"',
+        '  -- Kelvin Bahrul Alam'
+      );
+    } else {
+      newLogs.push(`Perintah tidak dikenal: "${command}". Ketik /help untuk bantuan.`);
+    }
+
+    setTerminalLogs(newLogs);
+    setTerminalInput('');
+  };
+
+  // Handle Security Scan
+  const startSecurityScan = () => {
+    if (isScanning) return;
+    setIsScanning(true);
+    setScanProgress(0);
+    setScanFinished(false);
+
+    const interval = setInterval(() => {
+      setScanProgress((prev) => {
+        if (prev >= 100) {
+          clearInterval(interval);
+          setIsScanning(false);
+          setScanFinished(true);
+          return 100;
+        }
+        return prev + 10;
+      });
+    }, 150);
+  };
+
+  // Tick visitor counter up and down randomly
+  React.useEffect(() => {
+    const timer = setInterval(() => {
+      setLiveVisitorCount(prev => {
+        const change = Math.random() > 0.5 ? 1 : -1;
+        return prev + change;
+      });
+    }, 4000);
+    return () => clearInterval(timer);
+  }, []);
+
   // Track Mouse Movement and Clickables
   React.useEffect(() => {
     if ('ontouchstart' in window || navigator.maxTouchPoints > 0) {
@@ -440,6 +584,77 @@ export default function LandingPage({
       {/* Pattern overlay layer */}
       {renderPatternOverlay()}
 
+      {/* Running Announcement Banner (Marquee) */}
+      <div className="w-full bg-slate-950/90 border-b border-cyan-500/15 py-2.5 overflow-hidden z-30 backdrop-blur-md relative flex items-center select-none shrink-0">
+        <div className="absolute left-0 top-0 bottom-0 bg-gradient-to-r from-slate-950 to-transparent w-16 z-10 pointer-events-none" />
+        <div className="absolute right-0 top-0 bottom-0 bg-gradient-to-l from-slate-950 to-transparent w-16 z-10 pointer-events-none" />
+        
+        {/* Ticker static prefix */}
+        <div className="flex items-center gap-1.5 px-3 py-1 bg-rose-500/10 border border-rose-500/20 text-rose-400 text-[9px] font-black uppercase tracking-wider rounded-md ml-4 z-20 shrink-0">
+          <span className="w-1.5 h-1.5 rounded-full bg-rose-500 animate-pulse" />
+          INFORMASI
+        </div>
+
+        {/* Seamless scrolling tracks */}
+        <div className="flex items-center w-full overflow-hidden">
+          <div className="flex gap-16 animate-marquee whitespace-nowrap hover:[animation-play-state:paused] cursor-pointer pl-4">
+            <span className="text-[10px] md:text-[11px] font-bold tracking-wider text-slate-300 font-mono flex items-center gap-2">
+              📢 <span className="text-cyan-400 font-black">KLEPON NEXUS V4.2:</span> Selamat datang di portal utama navigasi multi-tautan resmi Kelvin Bahrul Alam!
+            </span>
+            <span className="text-[10px] md:text-[11px] font-bold tracking-wider text-slate-300 font-mono flex items-center gap-2">
+              🔒 <span className="text-emerald-400 font-black">SSL VERIFIED:</span> Semua tautan aktif telah melewati enkripsi SHA-256 real-time yang aman.
+            </span>
+            <span className="text-[10px] md:text-[11px] font-bold tracking-wider text-slate-300 font-mono flex items-center gap-2">
+              🚀 <span className="text-indigo-400 font-black">METRIK SISTEM:</span> Gunakan tombol diagnostik "PINDAI SEKARANG" untuk meninjau status latensi internet Anda.
+            </span>
+            
+            {/* Set 2 (for seamless loop) */}
+            <span className="text-[10px] md:text-[11px] font-bold tracking-wider text-slate-300 font-mono flex items-center gap-2">
+              📢 <span className="text-cyan-400 font-black">KLEPON NEXUS V4.2:</span> Selamat datang di portal utama navigasi multi-tautan resmi Kelvin Bahrul Alam!
+            </span>
+            <span className="text-[10px] md:text-[11px] font-bold tracking-wider text-slate-300 font-mono flex items-center gap-2">
+              🔒 <span className="text-emerald-400 font-black">SSL VERIFIED:</span> Semua tautan aktif telah melewati enkripsi SHA-256 real-time yang aman.
+            </span>
+            <span className="text-[10px] md:text-[11px] font-bold tracking-wider text-slate-300 font-mono flex items-center gap-2">
+              🚀 <span className="text-indigo-400 font-black">METRIK SISTEM:</span> Gunakan tombol diagnostik "PINDAI SEKARANG" untuk meninjau status latensi internet Anda.
+            </span>
+          </div>
+        </div>
+      </div>
+
+      {/* Quantum Starfield Particle Background */}
+      <div className="absolute inset-0 pointer-events-none overflow-hidden z-[1]">
+        {Array.from({ length: 18 }).map((_, i) => {
+          const size = Math.floor(Math.random() * 3) + 2;
+          const left = Math.floor(Math.random() * 100);
+          const delay = Math.random() * 8;
+          const duration = Math.random() * 14 + 10;
+          return (
+            <motion.div
+              key={i}
+              initial={{ y: '110vh', x: `${left}vw`, opacity: 0 }}
+              animate={{
+                y: '-10vh',
+                opacity: [0, 0.6, 0.6, 0],
+                x: [`${left}vw`, `${left + (Math.random() * 4 - 2)}vw`, `${left}vw`]
+              }}
+              transition={{
+                duration,
+                repeat: Infinity,
+                delay,
+                ease: 'linear'
+              }}
+              className="absolute bg-cyan-400/30 rounded-full"
+              style={{
+                width: size,
+                height: size,
+                boxShadow: '0 0 8px rgba(6, 182, 212, 0.4)'
+              }}
+            />
+          );
+        })}
+      </div>
+
       {/* Creator panel shortcut floating on top left for ease of use (visible only for logged in admins) */}
       {isAdminLogged && (
         <div className="absolute top-4 left-4 z-40">
@@ -457,7 +672,7 @@ export default function LandingPage({
       <div className="relative z-10 w-full max-w-xl mx-auto px-6 pt-16 flex-1 flex flex-col items-center">
         
         {/* Dynamic Typewriter Welcome Message */}
-        <div className="mb-6 text-center font-mono text-[11px] md:text-xs tracking-[0.25em] font-black text-cyan-400 drop-shadow-[0_0_10px_rgba(6,182,212,0.6)] uppercase flex items-center justify-center gap-2 select-none bg-slate-950/50 px-4 py-2 rounded-xl border border-cyan-500/15 backdrop-blur-sm shadow-md">
+        <div className="mb-6 text-center font-gaming text-[11px] md:text-xs tracking-[0.25em] font-black text-cyan-400 drop-shadow-[0_0_10px_rgba(6,182,212,0.6)] uppercase flex items-center justify-center gap-2 select-none bg-slate-950/50 px-4 py-2 rounded-xl border border-cyan-500/15 backdrop-blur-sm shadow-md">
           <span className="text-rose-500 animate-pulse">🎯</span>
           <TypewriterText text="WELCOME TO WEBSITE KLEPON" delay={70} />
         </div>
@@ -542,16 +757,68 @@ export default function LandingPage({
           )}
         </div>
 
+        {/* Search Bar & Category Quick Filters */}
+        {filteredLinks.length > 0 && (
+          <div className="w-full max-w-md mt-6 mb-2 space-y-4">
+            {/* Elegant Neon Search Input */}
+            <div className="relative group">
+              <div className="absolute inset-0 bg-gradient-to-r from-cyan-500/10 via-indigo-500/10 to-cyan-500/10 rounded-xl blur-md group-focus-within:opacity-100 opacity-60 transition-opacity" />
+              <div className="relative bg-[#050914]/80 border border-slate-800 focus-within:border-cyan-500/50 rounded-xl p-[1px] transition-all">
+                <div className="flex items-center gap-2.5 px-3 py-2.5">
+                  <Icons.Search className="w-4 h-4 text-slate-500 group-focus-within:text-cyan-400 transition-colors" />
+                  <input
+                    type="text"
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    placeholder="Cari tautan..."
+                    className="flex-1 bg-transparent text-xs text-white focus:outline-none placeholder:text-slate-600 font-medium"
+                  />
+                  {searchQuery && (
+                    <button
+                      onClick={() => setSearchQuery('')}
+                      className="p-1 hover:bg-white/5 rounded-md text-slate-500 hover:text-white transition-colors"
+                    >
+                      <Icons.X className="w-3 h-3" />
+                    </button>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* Scrolling Pill Category Filter */}
+            {categories.length > 2 && (
+              <div className="flex items-center gap-1.5 overflow-x-auto pb-1.5 scrollbar-none -mx-2 px-2">
+                {categories.map((cat) => {
+                  const isActive = selectedCategory === cat;
+                  return (
+                    <button
+                      key={cat}
+                      onClick={() => setSelectedCategory(cat)}
+                      className={`px-3 py-1.5 rounded-full text-[10px] font-black tracking-wider uppercase transition-all duration-300 shrink-0 cursor-pointer ${
+                        isActive
+                          ? 'bg-gradient-to-r from-cyan-500 to-indigo-500 text-slate-950 shadow-[0_0_12px_rgba(6,182,212,0.35)] scale-105'
+                          : 'bg-slate-950/65 hover:bg-slate-900 border border-slate-850 hover:border-slate-700 text-slate-400 hover:text-white'
+                      }`}
+                    >
+                      {cat}
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        )}
+
         {/* List of custom compiled active links */}
-        <div className="w-full space-y-4 max-w-md">
-          {filteredLinks.map((link) => (
+        <div className="w-full space-y-3 max-w-md">
+          {searchFilteredLinks.map((link) => (
             <motion.a
               key={link.id}
               whileHover={{ 
-                scale: 1.03, 
+                scale: 1.02, 
                 x: 4,
-                boxShadow: "0px 0px 20px rgba(6, 182, 212, 0.45)",
-                borderColor: "rgba(6, 182, 212, 0.9)",
+                boxShadow: "0px 0px 18px rgba(6, 182, 212, 0.4)",
+                borderColor: "rgba(6, 182, 212, 0.8)",
               }}
               whileTap={{ scale: 0.98 }}
               href={link.url}
@@ -561,29 +828,56 @@ export default function LandingPage({
                 triggerShot(e.clientX, e.clientY);
                 onLinkClick(link.id);
               }}
-              className={`w-full py-4 px-5 flex items-center justify-between gap-3 text-sm md:text-base cursor-pointer transition-all duration-200 ${getButtonStyleClass()} ${getLinkAnimationClass(link.animation)}`}
+              className={`w-full py-3.5 px-4.5 flex items-center justify-between gap-3 text-sm md:text-base cursor-pointer transition-all duration-200 ${getButtonStyleClass()} ${getLinkAnimationClass(link.animation)}`}
             >
-              <span className="shrink-0">
-                {link.imageType === 'upload' && link.imageValue ? (
-                  <img 
-                    src={link.imageValue} 
-                    alt="" 
-                    className="w-5 h-5 md:w-6 md:h-6 rounded-md object-cover border border-white/20" 
-                    referrerPolicy="no-referrer"
-                    onError={(e) => {
-                      (e.target as HTMLImageElement).style.display = 'none';
-                    }}
-                  />
-                ) : (
-                  renderLinkIcon(link.icon)
+              <div className="flex items-center gap-3 truncate">
+                <span className="shrink-0">
+                  {link.imageType === 'upload' && link.imageValue ? (
+                    <img 
+                      src={link.imageValue} 
+                      alt="" 
+                      className="w-5 h-5 md:w-6 md:h-6 rounded-md object-cover border border-white/20" 
+                      referrerPolicy="no-referrer"
+                      onError={(e) => {
+                        (e.target as HTMLImageElement).style.display = 'none';
+                      }}
+                    />
+                  ) : (
+                    renderLinkIcon(link.icon)
+                  )}
+                </span>
+                <span className="font-bold truncate text-left">{link.title}</span>
+              </div>
+              
+              <div className="flex items-center gap-2 shrink-0">
+                {link.category && (
+                  <span className="hidden sm:inline-block text-[8px] font-black uppercase tracking-wider bg-cyan-400/10 border border-cyan-400/20 text-cyan-400 px-2 py-0.5 rounded-full">
+                    {link.category}
+                  </span>
                 )}
-              </span>
-              <span className="font-bold text-center flex-1 truncate">{link.title}</span>
-              <span className="w-5 h-5 shrink-0 opacity-40">
-                <Icons.ChevronRight className="w-5 h-5" />
-              </span>
+                <span className="w-4 h-4 opacity-40">
+                  <Icons.ChevronRight className="w-4 h-4" />
+                </span>
+              </div>
             </motion.a>
           ))}
+
+          {searchFilteredLinks.length === 0 && filteredLinks.length > 0 && (
+            <div className="text-center py-12 bg-slate-950/40 border border-dashed border-slate-900 rounded-2xl p-6">
+              <Icons.SearchX className="w-8 h-8 text-slate-600 mx-auto mb-2.5" />
+              <p className="text-xs text-slate-400 font-bold">Tautan tidak ditemukan</p>
+              <p className="text-[10px] text-slate-500 mt-1">Coba cari kata kunci lain atau bersihkan filter.</p>
+              <button
+                onClick={() => {
+                  setSearchQuery('');
+                  setSelectedCategory('Semua');
+                }}
+                className="mt-3.5 px-3.5 py-1.5 bg-slate-900 hover:bg-slate-800 text-[10px] font-black uppercase tracking-wider text-cyan-400 hover:text-white border border-slate-800 hover:border-cyan-500/30 rounded-lg transition-colors cursor-pointer"
+              >
+                Reset Pencarian
+              </button>
+            </div>
+          )}
 
           {filteredLinks.length === 0 && (
             <div className="text-center py-16 text-slate-500 italic text-sm">
@@ -591,6 +885,116 @@ export default function LandingPage({
             </div>
           )}
         </div>
+
+        {/* NEW FUTURISTIC CYBER WIDGETS */}
+        {!(isStealthTriggered && stealthElementsToHide.includes('widgets')) && (
+          <div className="w-full max-w-md mt-10 space-y-6">
+            
+            {/* 1. SERVER STATUS MONITORING & REALTIME METRICS PANEL */}
+            <div className="bg-[#050914]/80 border border-cyan-500/15 rounded-2xl p-5 shadow-[0_0_20px_rgba(6,182,212,0.05)] backdrop-blur-md relative overflow-hidden text-left">
+              <div className="absolute top-0 inset-x-0 h-[1.5px] bg-gradient-to-r from-transparent via-cyan-400 to-transparent" />
+              
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center gap-2">
+                  <div className="p-1.5 bg-cyan-400/10 rounded-lg border border-cyan-500/20 text-cyan-400">
+                    <Icons.Cpu className="w-4 h-4 animate-pulse" />
+                  </div>
+                  <div>
+                    <h4 className="text-xs font-black tracking-wider text-cyan-400 uppercase font-gaming">SISTEM KENDALI METRIK</h4>
+                    <p className="text-[8px] text-slate-500 uppercase font-mono tracking-widest">LIVE SERVER OVERWATCH v4.2</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-1.5 text-[9px] font-bold font-mono text-emerald-400 bg-emerald-950/40 border border-emerald-500/20 px-2 py-0.5 rounded-full">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping" />
+                  ONLINE
+                </div>
+              </div>
+
+              {/* Grid of Metrics */}
+              <div className="grid grid-cols-2 gap-3 mb-4">
+                <div className="bg-slate-950/40 border border-slate-900 rounded-xl p-3 flex flex-col justify-between">
+                  <span className="text-[8px] font-black text-slate-500 uppercase tracking-wider font-mono">LATENSI KONEKSI</span>
+                  <div className="flex items-baseline gap-1 mt-1">
+                    <span className="text-lg font-black text-cyan-400 font-mono tracking-tighter">18</span>
+                    <span className="text-[9px] font-bold text-slate-400 font-mono">ms</span>
+                  </div>
+                  <span className="text-[7px] text-emerald-400 uppercase font-mono tracking-wide mt-1">Sangat Cepat ✓</span>
+                </div>
+
+                <div className="bg-slate-950/40 border border-slate-900 rounded-xl p-3 flex flex-col justify-between">
+                  <span className="text-[8px] font-black text-slate-500 uppercase tracking-wider font-mono">PENGUNJUNG AKTIF</span>
+                  <div className="flex items-baseline gap-1 mt-1">
+                    <span className="text-lg font-black text-rose-400 font-mono tracking-tighter">{liveVisitorCount}</span>
+                    <span className="text-[9px] font-bold text-slate-400 font-mono">user</span>
+                  </div>
+                  <span className="text-[7px] text-rose-300 uppercase font-mono tracking-wide mt-1">Sedang Berselancar</span>
+                </div>
+
+                {/* Jam Digital Satelit HUD */}
+                <div className="bg-slate-950/40 border border-slate-900 rounded-xl p-3 flex flex-col justify-between col-span-2">
+                  <div className="flex justify-between items-center">
+                    <span className="text-[8px] font-black text-slate-500 uppercase tracking-wider font-mono">JAM SATELIT (WIB / LOCAL)</span>
+                    <span className="text-[7px] text-indigo-400 uppercase font-mono tracking-wider font-bold">UPTIME: {systemUptime}s</span>
+                  </div>
+                  <div className="flex items-baseline justify-between mt-1">
+                    <span className="text-xl font-black text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 via-indigo-300 to-rose-400 font-mono tracking-widest">{liveTime}</span>
+                    <span className="text-[8px] text-slate-400 font-mono">GMT+7 / ONLINE</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Security Diagnostics Section */}
+              <div className="bg-slate-950/50 border border-slate-900 rounded-xl p-3.5 space-y-3">
+                <div className="flex justify-between items-center">
+                  <span className="text-[9px] font-black text-slate-400 uppercase tracking-wider font-mono">DIAGNOSTIK KEAMANAN</span>
+                  <button
+                    onClick={startSecurityScan}
+                    disabled={isScanning}
+                    className="px-3 py-1 bg-gradient-to-r from-cyan-400 to-indigo-500 hover:from-cyan-500 hover:to-indigo-600 disabled:from-slate-800 disabled:to-slate-800 text-slate-950 disabled:text-slate-500 text-[8px] font-black tracking-widest uppercase rounded-lg transition-all active:scale-95 cursor-pointer shadow-[0_0_15px_rgba(6,182,212,0.25)] select-none"
+                  >
+                    {isScanning ? 'MEMINDAI...' : 'PINDAI SEKARANG'}
+                  </button>
+                </div>
+
+                {isScanning && (
+                  <div className="space-y-1.5">
+                    <div className="flex justify-between items-center text-[8px] font-mono font-bold text-cyan-400">
+                      <span>SCANNING CORE MEMORY & SSL CERT...</span>
+                      <span>{scanProgress}%</span>
+                    </div>
+                    <div className="h-1.5 w-full bg-[#040810] rounded-full overflow-hidden p-[1px] border border-cyan-500/10">
+                      <motion.div
+                        className="h-full rounded-full bg-gradient-to-r from-cyan-400 to-indigo-500"
+                        style={{ width: `${scanProgress}%` }}
+                      />
+                    </div>
+                  </div>
+                )}
+
+                {scanFinished && !isScanning && (
+                  <motion.div
+                    initial={{ opacity: 0, y: 5 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="p-2 bg-emerald-500/10 border border-emerald-500/20 rounded-lg flex items-center gap-2"
+                  >
+                    <Icons.ShieldCheck className="w-5 h-5 text-emerald-400 shrink-0" />
+                    <div>
+                      <p className="text-[9px] font-black text-emerald-400 uppercase font-mono">STATUS: 100% SECURE & VERIFIED</p>
+                      <p className="text-[7px] text-slate-400 uppercase font-mono">Enkripsi SHA-256 Cloud Firestore aktif penuh.</p>
+                    </div>
+                  </motion.div>
+                )}
+
+                {!isScanning && !scanFinished && (
+                  <p className="text-[8px] text-slate-500 uppercase font-mono leading-relaxed">
+                    Klik tombol untuk melakukan verifikasi keamanan tautan SSL secara real-time.
+                  </p>
+                )}
+              </div>
+            </div>
+
+          </div>
+        )}
 
         {/* Review / Suggestion Box Form Card */}
         {!(isStealthTriggered && stealthElementsToHide.includes('widgets')) && (
