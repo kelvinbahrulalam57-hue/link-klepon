@@ -27,7 +27,7 @@ interface PushNotification {
 
 export default function App() {
   // Load initial state
-  const [appState, setAppState] = useState<AppState>(() => {
+  const [appState, rawSetAppState] = useState<AppState>(() => {
     const saved = localStorage.getItem('link_klepon_db_v1');
     if (saved) {
       try {
@@ -38,6 +38,116 @@ export default function App() {
     }
     return DEFAULT_APP_STATE;
   });
+
+  const lastLocalEdit = React.useRef<number>(0);
+  const stateRef = React.useRef<AppState>(appState);
+
+  // Keep stateRef in sync with the actual state
+  useEffect(() => {
+    stateRef.current = appState;
+  }, [appState]);
+
+  const setAppState = (updater: AppState | ((prev: AppState) => AppState)) => {
+    lastLocalEdit.current = Date.now();
+    rawSetAppState(updater);
+  };
+
+  // 1. Fetch initial state from server on mount
+  useEffect(() => {
+    let active = true;
+    const fetchInitialState = async () => {
+      try {
+        const res = await fetch('/api/state');
+        if (!active) return;
+        if (res.ok) {
+          const data = await res.json();
+          if (data.state) {
+            rawSetAppState(data.state);
+            localStorage.setItem('link_klepon_db_v1', JSON.stringify(data.state));
+          } else {
+            // Seed server with our current state
+            await fetch('/api/state', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ state: stateRef.current })
+            });
+          }
+        }
+      } catch (err) {
+        // Catch quietly to prevent noisy console logs
+      }
+    };
+    fetchInitialState();
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  // 2. Debounced save to server and localStorage
+  useEffect(() => {
+    const handler = setTimeout(async () => {
+      localStorage.setItem('link_klepon_db_v1', JSON.stringify(appState));
+      try {
+        await fetch('/api/state', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ state: appState })
+        });
+      } catch (err) {
+        // Catch quietly to prevent noisy console logs
+      }
+    }, 1000);
+
+    return () => {
+      clearTimeout(handler);
+    };
+  }, [appState]);
+
+  // 3. Poll server for real-time updates from other tabs or devices
+  useEffect(() => {
+    const pollInterval = setInterval(async () => {
+      // Only pull updates if we haven't edited anything locally in the last 4 seconds
+      if (Date.now() - lastLocalEdit.current > 4000) {
+        try {
+          const res = await fetch('/api/state');
+          if (res.ok) {
+            const data = await res.json();
+            if (data.state) {
+              const currentStr = JSON.stringify(stateRef.current);
+              const incomingStr = JSON.stringify(data.state);
+              if (currentStr !== incomingStr) {
+                rawSetAppState(data.state);
+                localStorage.setItem('link_klepon_db_v1', incomingStr);
+              }
+            }
+          }
+        } catch (err) {
+          // Catch quietly to prevent noisy console logs when server is offline or restarting
+        }
+      }
+    }, 3000);
+
+    return () => clearInterval(pollInterval);
+  }, []);
+
+  // 4. Instant same-browser multi-tab synchronization via storage event
+  useEffect(() => {
+    const handleStorageChange = (e: StorageEvent) => {
+      if (e.key === 'link_klepon_db_v1' && e.newValue) {
+        try {
+          const parsed = JSON.parse(e.newValue);
+          const currentStr = JSON.stringify(stateRef.current);
+          if (currentStr !== e.newValue) {
+            rawSetAppState(parsed);
+          }
+        } catch (err) {
+          // Catch quietly
+        }
+      }
+    };
+    window.addEventListener('storage', handleStorageChange);
+    return () => window.removeEventListener('storage', handleStorageChange);
+  }, []);
 
   // Editor admin themes: 'slate' | 'gold' | 'sage' (matches screenshot Image 4)
   const [adminStyle, setAdminStyle] = useState<'slate' | 'gold' | 'sage'>('slate');
@@ -83,17 +193,6 @@ export default function App() {
       "Penyimpanan Lokal (Offline Storage) Aktif & Sinkron"
     ];
   });
-
-  // Save changes to database (local storage persistence with 1s debounce autosave system)
-  useEffect(() => {
-    const handler = setTimeout(() => {
-      localStorage.setItem('link_klepon_db_v1', JSON.stringify(appState));
-    }, 1000);
-
-    return () => {
-      clearTimeout(handler);
-    };
-  }, [appState]);
 
   useEffect(() => {
     localStorage.setItem('link_klepon_security_logs', JSON.stringify(suspiciousLogs));

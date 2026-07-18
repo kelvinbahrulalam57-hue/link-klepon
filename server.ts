@@ -27,7 +27,44 @@ async function startServer() {
   const PORT = 3000;
 
   // Middleware to parse incoming json payloads
-  app.use(express.json());
+  app.use(express.json({ limit: "50mb" }));
+  app.use(express.urlencoded({ limit: "50mb", extended: true }));
+
+  // Simple in-memory/file-based persistent store for real-time synchronization
+  let appStateCache: any = null;
+  const fs = await import("fs/promises").catch(() => null);
+  const stateFilePath = path.join(process.cwd(), "state_data.json");
+
+  // Load state from file initially if available
+  if (fs) {
+    try {
+      const data = await fs.readFile(stateFilePath, "utf8");
+      appStateCache = JSON.parse(data);
+      console.log("[Server] Loaded existing state from state_data.json");
+    } catch (e) {
+      console.log("[Server] No existing state_data.json found, starting fresh");
+    }
+  }
+
+  // GET /api/state
+  app.get("/api/state", (req, res) => {
+    res.json({ state: appStateCache });
+  });
+
+  // POST /api/state
+  app.post("/api/state", async (req, res) => {
+    try {
+      const { state } = req.body;
+      appStateCache = state;
+      if (fs) {
+        await fs.writeFile(stateFilePath, JSON.stringify(state, null, 2), "utf8");
+      }
+      res.json({ success: true });
+    } catch (err: any) {
+      console.error("Save State Error:", err);
+      res.status(500).json({ error: err.message });
+    }
+  });
 
   // API Route: Generate SEO Content suggestions using Gemini
   app.post("/api/gemini/seo", async (req, res) => {
