@@ -18,6 +18,8 @@ import EntranceAnimation from './components/EntranceAnimation.tsx';
 import * as Icons from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import LKLogo from './components/LKLogo.tsx';
+import { doc, setDoc, onSnapshot } from 'firebase/firestore';
+import { db } from './firebase.ts';
 
 interface PushNotification {
   id: string;
@@ -52,49 +54,48 @@ export default function App() {
     rawSetAppState(updater);
   };
 
-  // 1. Fetch initial state from server on mount
+  // 1. Listen to real-time updates from Firestore on mount
   useEffect(() => {
     let active = true;
-    const fetchInitialState = async () => {
-      try {
-        const res = await fetch('/api/state');
-        if (!active) return;
-        if (res.ok) {
-          const data = await res.json();
-          if (data.state) {
+    const docRef = doc(db, 'app_state', 'current');
+    
+    const unsubscribe = onSnapshot(docRef, (docSnap) => {
+      if (!active) return;
+      if (docSnap.exists()) {
+        const data = docSnap.data();
+        if (data && data.state) {
+          const currentStr = JSON.stringify(stateRef.current);
+          const incomingStr = JSON.stringify(data.state);
+          if (currentStr !== incomingStr) {
             rawSetAppState(data.state);
-            localStorage.setItem('link_klepon_db_v1', JSON.stringify(data.state));
-          } else {
-            // Seed server with our current state
-            await fetch('/api/state', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ state: stateRef.current })
-            });
+            localStorage.setItem('link_klepon_db_v1', incomingStr);
           }
         }
-      } catch (err) {
-        // Catch quietly to prevent noisy console logs
+      } else {
+        // Seed Firestore if it doesn't exist yet
+        setDoc(docRef, { state: stateRef.current }).catch((err) => {
+          console.error("Firebase seed error:", err);
+        });
       }
-    };
-    fetchInitialState();
+    }, (error) => {
+      console.error("Firestore listen error:", error);
+    });
+
     return () => {
       active = false;
+      unsubscribe();
     };
   }, []);
 
-  // 2. Debounced save to server and localStorage
+  // 2. Debounced save to Firestore and localStorage
   useEffect(() => {
     const handler = setTimeout(async () => {
       localStorage.setItem('link_klepon_db_v1', JSON.stringify(appState));
       try {
-        await fetch('/api/state', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ state: appState })
-        });
+        const docRef = doc(db, 'app_state', 'current');
+        await setDoc(docRef, { state: appState });
       } catch (err) {
-        // Catch quietly to prevent noisy console logs
+        console.error("Firestore write error:", err);
       }
     }, 1000);
 
@@ -102,33 +103,6 @@ export default function App() {
       clearTimeout(handler);
     };
   }, [appState]);
-
-  // 3. Poll server for real-time updates from other tabs or devices
-  useEffect(() => {
-    const pollInterval = setInterval(async () => {
-      // Only pull updates if we haven't edited anything locally in the last 4 seconds
-      if (Date.now() - lastLocalEdit.current > 4000) {
-        try {
-          const res = await fetch('/api/state');
-          if (res.ok) {
-            const data = await res.json();
-            if (data.state) {
-              const currentStr = JSON.stringify(stateRef.current);
-              const incomingStr = JSON.stringify(data.state);
-              if (currentStr !== incomingStr) {
-                rawSetAppState(data.state);
-                localStorage.setItem('link_klepon_db_v1', incomingStr);
-              }
-            }
-          }
-        } catch (err) {
-          // Catch quietly to prevent noisy console logs when server is offline or restarting
-        }
-      }
-    }, 3000);
-
-    return () => clearInterval(pollInterval);
-  }, []);
 
   // 4. Instant same-browser multi-tab synchronization via storage event
   useEffect(() => {
