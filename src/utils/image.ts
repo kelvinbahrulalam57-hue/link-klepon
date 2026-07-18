@@ -2,6 +2,8 @@
  * Utilities for client-side image compression and base64 optimization.
  */
 
+import { AppState } from '../types.ts';
+
 /**
  * Compresses a base64 image string to a specified size and quality.
  */
@@ -15,8 +17,8 @@ export function compressBase64Image(
     return Promise.resolve(base64Str);
   }
 
-  // If already small (e.g., < 80 KB), return as is to avoid unnecessary cycles
-  if (base64Str.length < 110000) {
+  // If already small (e.g., < 25 KB), return as is to avoid unnecessary cycles
+  if (base64Str.length < 35000) {
     return Promise.resolve(base64Str);
   }
 
@@ -59,79 +61,119 @@ export function compressBase64Image(
   });
 }
 
-import { AppState } from '../types.ts';
-
 /**
- * Scans the AppState for any large base64 image fields and compresses them.
- * Returns a new optimized AppState.
+ * Scans the AppState for any large base64 image fields and compresses them recursively.
+ * If the final state size is still dangerously large, it aggressively trims or clears
+ * the largest images to guarantee the final state size fits under the Firestore 1MB limit.
  */
 export async function compressAppState(state: AppState): Promise<AppState> {
-  const newState = { ...state };
-  let changed = false;
+  if (!state) return state;
 
-  // 1. Profile Avatar
-  if (newState.profile?.avatarValue && newState.profile.avatarValue.startsWith('data:image/')) {
-    const original = newState.profile.avatarValue;
-    const compressed = await compressBase64Image(original, 300, 300, 0.7);
-    if (compressed !== original) {
-      newState.profile = { ...newState.profile, avatarValue: compressed };
-      changed = true;
-    }
+  // Deep clone state to avoid direct mutation
+  let newState: AppState;
+  try {
+    newState = JSON.parse(JSON.stringify(state));
+  } catch (err) {
+    return state;
   }
 
-  // 2. Profile Favicon
-  if (newState.profile?.favicon && newState.profile.favicon.startsWith('data:image/')) {
-    const original = newState.profile.favicon;
-    const compressed = await compressBase64Image(original, 64, 64, 0.7);
-    if (compressed !== original) {
-      newState.profile = { ...newState.profile, favicon: compressed };
-      changed = true;
+  // Recursive walker to compress any base64 images
+  async function walkAndCompress(obj: any, isAggressive = false): Promise<any> {
+    if (!obj || typeof obj !== 'object') {
+      return obj;
     }
-  }
 
-  // 3. Theme Background (if base64 URL inside)
-  if (newState.theme?.backgroundValue && newState.theme.backgroundValue.includes('data:image/')) {
-    // Background value might be of format `url("data:image/...")`
-    const original = newState.theme.backgroundValue;
-    const match = original.match(/url\(["']?(data:image\/[^"']+)["']?\)/);
-    if (match && match[1]) {
-      const base64Part = match[1];
-      const compressedPart = await compressBase64Image(base64Part, 800, 800, 0.6); // Slightly larger dimensions for background
-      if (compressedPart !== base64Part) {
-        newState.theme = {
-          ...newState.theme,
-          backgroundValue: original.replace(base64Part, compressedPart)
-        };
-        changed = true;
+    if (Array.isArray(obj)) {
+      for (let i = 0; i < obj.length; i++) {
+        obj[i] = await walkAndCompress(obj[i], isAggressive);
       }
-    } else if (original.startsWith('data:image/')) {
-      const compressed = await compressBase64Image(original, 800, 800, 0.6);
-      if (compressed !== original) {
-        newState.theme = { ...newState.theme, backgroundValue: compressed };
-        changed = true;
+      return obj;
+    }
+
+    for (const key of Object.keys(obj)) {
+      const val = obj[key];
+      if (typeof val === 'string' && val.startsWith('data:image/')) {
+        // Configure dimensions
+        let maxW = isAggressive ? 80 : 300;
+        let maxH = isAggressive ? 80 : 300;
+        let quality = isAggressive ? 0.4 : 0.7;
+
+        if (!isAggressive) {
+          if (key.toLowerCase().includes('background')) {
+            maxW = 600;
+            maxH = 600;
+            quality = 0.6;
+          } else if (key.toLowerCase().includes('favicon')) {
+            maxW = 48;
+            maxH = 48;
+            quality = 0.7;
+          } else if (key.toLowerCase().includes('icon')) {
+            maxW = 80;
+            maxH = 80;
+            quality = 0.7;
+          }
+        }
+
+        const compressed = await compressBase64Image(val, maxW, maxH, quality);
+        obj[key] = compressed;
+      } else if (typeof val === 'string' && val.includes('data:image/')) {
+        // Handle background url("data:image/...") syntax
+        const match = val.match(/url\(["']?(data:image\/[^"']+)["']?\)/);
+        if (match && match[1]) {
+          const base64Part = match[1];
+          const maxDim = isAggressive ? 100 : 600;
+          const qual = isAggressive ? 0.4 : 0.6;
+          const compressedPart = await compressBase64Image(base64Part, maxDim, maxDim, qual);
+          obj[key] = val.replace(base64Part, compressedPart);
+        }
+      } else if (typeof val === 'object') {
+        obj[key] = await walkAndCompress(val, isAggressive);
       }
     }
+
+    return obj;
   }
 
-  // 4. Link Item Icons/Images
-  if (newState.links && newState.links.length > 0) {
-    const updatedLinks = [...newState.links];
-    let linksChanged = false;
-    for (let i = 0; i < updatedLinks.length; i++) {
-      const link = updatedLinks[i];
-      if (link.imageValue && link.imageValue.startsWith('data:image/')) {
-        const original = link.imageValue;
-        const compressed = await compressBase64Image(original, 200, 200, 0.7);
-        if (compressed !== original) {
-          updatedLinks[i] = { ...link, imageValue: compressed };
-          linksChanged = true;
+  // 1. Primary standard compression pass
+  newState = await walkAndCompress(newState, false);
+
+  // 2. Check size. If it exceeds 800KB (leaving 200KB buffer for Firestore 1MB limits),
+  // we perform an AGGRESSIVE compression pass downscale.
+  let stateStr = JSON.stringify(newState);
+  if (stateStr.length > 800000) {
+    console.warn("[compressAppState] State size exceeds 800KB. Applying aggressive downscale...");
+    newState = await walkAndCompress(newState, true);
+    stateStr = JSON.stringify(newState);
+  }
+
+  // 3. Absolute Failsafe: If it STILL exceeds 900KB, remove or replace large base64 strings with simple fallbacks
+  if (stateStr.length > 900000) {
+    console.warn("[compressAppState] State size STILL exceeds 900KB. Dropping extremely large base64 image data...");
+    
+    // Recursive walker to drop large image strings
+    function walkAndClearLargeStrings(obj: any): any {
+      if (!obj || typeof obj !== 'object') return obj;
+      if (Array.isArray(obj)) {
+        for (let i = 0; i < obj.length; i++) {
+          obj[i] = walkAndClearLargeStrings(obj[i]);
+        }
+        return obj;
+      }
+      for (const key of Object.keys(obj)) {
+        const val = obj[key];
+        if (typeof val === 'string' && val.startsWith('data:image/') && val.length > 10000) {
+          // Replace with a simple, small fallback text/initials representation
+          obj[key] = "LK"; 
+        } else if (typeof val === 'string' && val.includes('data:image/') && val.length > 10000) {
+          obj[key] = "none";
+        } else if (typeof val === 'object') {
+          obj[key] = walkAndClearLargeStrings(val);
         }
       }
+      return obj;
     }
-    if (linksChanged) {
-      newState.links = updatedLinks;
-      changed = true;
-    }
+
+    newState = walkAndClearLargeStrings(newState);
   }
 
   return newState;

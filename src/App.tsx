@@ -72,9 +72,15 @@ export default function App() {
           }
         }
       } else {
-        // Seed Firestore if it doesn't exist yet
-        setDoc(docRef, { state: stateRef.current }).catch((err) => {
-          console.error("Firebase seed error:", err);
+        // Seed Firestore with optimized state if it doesn't exist yet
+        import('./utils/image.ts').then(async ({ compressAppState }) => {
+          if (!active) return;
+          const optimized = await compressAppState(stateRef.current);
+          setDoc(docRef, { state: optimized }).catch((err) => {
+            console.error("Firebase seed error:", err);
+          });
+        }).catch((err) => {
+          console.error("Failed to load image utility for seed:", err);
         });
       }
     }, (error) => {
