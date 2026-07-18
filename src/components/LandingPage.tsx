@@ -170,49 +170,10 @@ export default function LandingPage({
     return () => window.removeEventListener('mousemove', handleMouseMove);
   }, []);
 
-  // Handle gunshot simulation (Ripple, Flash, and Web Audio API Synthesis)
+  // Handle gunshot simulation (Muted per user request, visuals remain intact!)
   const playLaserGunshotSound = () => {
-    try {
-      const AudioContext = window.AudioContext || (window as any).webkitAudioContext;
-      if (!AudioContext) return;
-      const ctx = new AudioContext();
-      
-      // Sweep laser frequency oscillator
-      const osc1 = ctx.createOscillator();
-      const gain1 = ctx.createGain();
-      
-      osc1.type = 'sawtooth';
-      osc1.frequency.setValueAtTime(1000, ctx.currentTime);
-      osc1.frequency.exponentialRampToValueAtTime(40, ctx.currentTime + 0.18);
-      
-      gain1.gain.setValueAtTime(0.1, ctx.currentTime);
-      gain1.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.18);
-      
-      osc1.connect(gain1);
-      gain1.connect(ctx.destination);
-      
-      osc1.start();
-      osc1.stop(ctx.currentTime + 0.18);
-      
-      // Heavy metal impact sub-oscillator
-      const osc2 = ctx.createOscillator();
-      const gain2 = ctx.createGain();
-      
-      osc2.type = 'triangle';
-      osc2.frequency.setValueAtTime(150, ctx.currentTime);
-      osc2.frequency.setValueAtTime(60, ctx.currentTime + 0.08);
-      
-      gain2.gain.setValueAtTime(0.15, ctx.currentTime);
-      gain2.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.12);
-      
-      osc2.connect(gain2);
-      gain2.connect(ctx.destination);
-      
-      osc2.start();
-      osc2.stop(ctx.currentTime + 0.12);
-    } catch (e) {
-      console.warn("AudioContext is blocked or unsupported:", e);
-    }
+    // Sound muted to prevent loud audio on clicking links/buttons
+    return;
   };
 
   const triggerShot = (clientX: number, clientY: number) => {
@@ -681,29 +642,7 @@ export default function LandingPage({
                     />
                   </div>
 
-                  {/* Star rating selector */}
-                  <div className="space-y-1">
-                    <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest block">BERIKAN RATING (BINTANG)</label>
-                    <div className="flex gap-1.5 pt-0.5">
-                      {[1, 2, 3, 4, 5].map((star) => (
-                        <button
-                          key={star}
-                          type="button"
-                          onClick={() => setFeedbackRating(star)}
-                          className="p-1 hover:scale-110 transition-transform cursor-pointer"
-                          title={`${star} Bintang`}
-                        >
-                          <Icons.Star 
-                            className={`w-6 h-6 transition-all ${
-                              star <= feedbackRating 
-                                ? 'text-amber-400 fill-amber-400 filter drop-shadow-[0_0_4px_rgba(245,158,11,0.5)]' 
-                                : 'text-slate-600'
-                            }`}
-                          />
-                        </button>
-                      ))}
-                    </div>
-                  </div>
+
 
                   {/* Suggestion Textarea */}
                   <div className="space-y-1">

@@ -157,8 +157,13 @@ export default function App() {
     return logged ? 'editor' : 'public';
   });
 
-  // Entrance animation state
-  const [showEntrance, setShowEntrance] = useState(true);
+  // Entrance animation state - play only once per visitor session, skip completely if logged in as admin
+  const [showEntrance, setShowEntrance] = useState(() => {
+    const logged = localStorage.getItem('link_klepon_admin_logged') === 'true';
+    if (logged) return false;
+    const played = sessionStorage.getItem('link_klepon_entrance_played');
+    return played !== 'true';
+  });
 
   // Side Drawer Preview Toggle State
   const [showPreviewDrawer, setShowPreviewDrawer] = useState(false);
@@ -336,7 +341,14 @@ export default function App() {
   return (
     <AnimatePresence mode="wait">
       {showEntrance ? (
-        <EntranceAnimation key="entrance" profile={appState.profile} onComplete={() => setShowEntrance(false)} />
+        <EntranceAnimation 
+          key="entrance" 
+          profile={appState.profile} 
+          onComplete={() => {
+            sessionStorage.setItem('link_klepon_entrance_played', 'true');
+            setShowEntrance(false);
+          }} 
+        />
       ) : appMode === 'public' ? (
         <motion.div
           key="public"
