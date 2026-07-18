@@ -90,10 +90,21 @@ export default function App() {
   // 2. Debounced save to Firestore and localStorage
   useEffect(() => {
     const handler = setTimeout(async () => {
-      localStorage.setItem('link_klepon_db_v1', JSON.stringify(appState));
       try {
+        const { compressAppState } = await import('./utils/image.ts');
+        const optimizedState = await compressAppState(appState);
+        const optimizedStr = JSON.stringify(optimizedState);
+        
+        localStorage.setItem('link_klepon_db_v1', optimizedStr);
+        
+        // If optimization modified the state, update local React state
+        const currentStr = JSON.stringify(appState);
+        if (optimizedStr !== currentStr) {
+          rawSetAppState(optimizedState);
+        }
+
         const docRef = doc(db, 'app_state', 'current');
-        await setDoc(docRef, { state: appState });
+        await setDoc(docRef, { state: optimizedState });
       } catch (err) {
         console.error("Firestore write error:", err);
       }
