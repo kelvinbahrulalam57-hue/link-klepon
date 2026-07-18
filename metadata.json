@@ -1,0 +1,8 @@
+{
+  "name": "Link Klepon",
+  "description": "Platform pembuatan halaman bio link interaktif dengan kustomisasi tema, analitik real-time, ekspor laporan, dan keamanan tingkat tinggi terinspirasi oleh Link Klepon.",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}
