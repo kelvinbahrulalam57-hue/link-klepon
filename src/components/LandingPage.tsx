@@ -11,6 +11,7 @@ import EntranceAnimation from './EntranceAnimation.tsx';
 import { InteractiveParticleBackground } from './InteractiveParticleBackground.tsx';
 import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
 import { db } from '../firebase.ts';
+import ChiptuneSynthPlayer from './ChiptuneSynthPlayer.tsx';
 
 import { motion, AnimatePresence } from 'motion/react';
 
@@ -193,6 +194,8 @@ export default function LandingPage({
   const [speedStage, setSpeedStage] = useState<'idle' | 'downloading' | 'uploading' | 'completed'>('idle');
   const [speedDownload, setSpeedDownload] = useState(0);
   const [speedUpload, setSpeedUpload] = useState(0);
+
+
 
   const handleCopyPortalLink = () => {
     try {
@@ -1077,6 +1080,8 @@ export default function LandingPage({
         {/* NEW FUTURISTIC CYBER WIDGETS */}
         {!(isStealthTriggered && stealthElementsToHide.includes('widgets')) && (
           <div className="w-full max-w-md mt-10 space-y-6">
+
+
             
             {/* 1. SERVER STATUS MONITORING & REALTIME METRICS PANEL */}
             <div className="bg-[#050914]/80 border border-cyan-500/15 rounded-2xl p-5 shadow-[0_0_20px_rgba(6,182,212,0.05)] backdrop-blur-md relative overflow-hidden text-left">
@@ -1368,6 +1373,9 @@ export default function LandingPage({
         {/* Review / Suggestion Box Form Card */}
         {!(isStealthTriggered && stealthElementsToHide.includes('widgets')) && (
           <>
+            {/* Realtime Synthwave Background Music Player */}
+            <ChiptuneSynthPlayer />
+
             <div className="w-full max-w-md mt-12 bg-slate-950/65 border border-cyan-500/20 p-5 rounded-2xl backdrop-blur-md shadow-[0_0_25px_rgba(6,182,212,0.1)] relative text-left">
               {/* Cyber retro decorative element */}
               <div className="absolute top-0 inset-x-0 h-[2px] bg-gradient-to-r from-cyan-500 via-indigo-500 to-cyan-500 rounded-t-2xl" />
@@ -1458,6 +1466,8 @@ export default function LandingPage({
                 </form>
               )}
             </div>
+
+
 
             {/* Tech tagline bar (Image 5 style) */}
             <div className="w-full max-w-md mt-8 border border-slate-800 bg-[#070b13]/80 rounded-lg py-2 px-4 text-center text-[9px] font-bold text-slate-400 tracking-[0.15em] flex justify-between items-center select-none uppercase">

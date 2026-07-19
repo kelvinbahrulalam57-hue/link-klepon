@@ -111,6 +111,61 @@ const playLaunchExplosion = () => {
   }
 };
 
+// Cool, Elegant, and Professional Logo Animation Variants
+const logoVariants = {
+  loading: {
+    scale: [0.96, 1.02, 0.96],
+    y: [-4, 4, -4], // smooth slow-motion hover
+    rotateY: [-4, 4, -4], // gentle perspective rotation
+    rotateX: [-2, 2, -2],
+    filter: [
+      "drop-shadow(0 0 15px rgba(6, 182, 212, 0.35))",
+      "drop-shadow(0 0 30px rgba(168, 85, 247, 0.4))",
+      "drop-shadow(0 0 15px rgba(6, 182, 212, 0.35))"
+    ],
+    transition: {
+      scale: { repeat: Infinity, duration: 4, ease: "easeInOut" },
+      y: { repeat: Infinity, duration: 4.5, ease: "easeInOut" },
+      rotateY: { repeat: Infinity, duration: 6, ease: "easeInOut" },
+      rotateX: { repeat: Infinity, duration: 5, ease: "easeInOut" },
+      filter: { repeat: Infinity, duration: 3.5, ease: "easeInOut" }
+    }
+  },
+  finished: {
+    scale: [1.02, 1.06, 1.02],
+    y: [-5, 5, -5],
+    rotateY: [-8, 8, -8],
+    rotateX: [-4, 4, -4],
+    filter: [
+      "drop-shadow(0 0 25px rgba(6, 182, 212, 0.6))",
+      "drop-shadow(0 0 45px rgba(168, 85, 247, 0.65))",
+      "drop-shadow(0 0 25px rgba(244, 63, 94, 0.55))"
+    ],
+    transition: {
+      scale: { repeat: Infinity, duration: 2.2, ease: "easeInOut" },
+      y: { repeat: Infinity, duration: 4, ease: "easeInOut" },
+      rotateY: { repeat: Infinity, duration: 5, ease: "easeInOut" },
+      rotateX: { repeat: Infinity, duration: 4.5, ease: "easeInOut" },
+      filter: { repeat: Infinity, duration: 3, ease: "easeInOut" }
+    }
+  },
+  launching: {
+    scale: [1, 0.95, 3.2],
+    rotate: [0, -3, 8], // subtle cinematic twist, very elegant
+    opacity: [1, 1, 0],
+    filter: [
+      "blur(0px) drop-shadow(0 0 25px rgba(6, 182, 212, 0.6))",
+      "blur(1px) drop-shadow(0 0 50px rgba(168, 85, 247, 0.75))",
+      "blur(10px) drop-shadow(0 0 100px rgba(255, 255, 255, 0))"
+    ],
+    transition: {
+      duration: 1.4,
+      times: [0, 0.25, 1],
+      ease: [0.25, 1, 0.5, 1] // professional cubic ease-out
+    }
+  }
+};
+
 export default function EntranceAnimation({
   onComplete,
   title = "WELCOME TO WEBSITE KLEPON",
@@ -245,7 +300,38 @@ export default function EntranceAnimation({
           animation: 'grid-scroll 18s linear infinite'
         }}
       />
+      
+      {/* 1b. PREMIUM CYBER MATRIX FALLING CHARACTERS */}
+      <div className="absolute inset-0 overflow-hidden pointer-events-none opacity-[0.12] z-0">
+        {Array.from({ length: 20 }).map((_, idx) => {
+          const left = `${(idx * 5) + 2}%`;
+          const duration = 2.0 + Math.random() * 3.5;
+          const delay = Math.random() * 6;
+          return (
+            <div
+              key={idx}
+              className="absolute text-[9px] font-mono text-cyan-400 select-none flex flex-col items-center"
+              style={{
+                left,
+                top: '-25%',
+                animation: `matrix-fall ${duration}s linear ${delay}s infinite`,
+              }}
+            >
+              {Array.from({ length: 8 }).map((_, charIdx) => {
+                const char = String.fromCharCode(33 + Math.floor(Math.random() * 93));
+                return <span key={charIdx} className="my-0.5 font-bold">{char}</span>;
+              })}
+            </div>
+          );
+        })}
+      </div>
       <style>{`
+        @keyframes matrix-fall {
+          0% { transform: translateY(0); opacity: 0; }
+          10% { opacity: 1; }
+          90% { opacity: 0.8; }
+          100% { transform: translateY(120vh); opacity: 0; }
+        }
         @keyframes grid-scroll {
           0% { background-position: 0 0; }
           100% { background-position: 0 400px; }
@@ -342,28 +428,51 @@ export default function EntranceAnimation({
             />
           </div>
 
+          {/* Circular Radial Equalizer spectrum lines surrounding the central core */}
+          <div className="absolute inset-2 flex items-center justify-center pointer-events-none z-0">
+            {Array.from({ length: 24 }).map((_, i) => {
+              const rotation = i * 15;
+              const hVal = eqHeights[i % 12] || 35;
+              const barHeight = 8 + (hVal * 0.16); // Dynamic height between 8px and 22px
+              return (
+                <div
+                  key={i}
+                  className="absolute w-[1.5px] rounded-full bg-gradient-to-t from-cyan-400 via-indigo-500 to-rose-400 opacity-70 shadow-[0_0_8px_rgba(34,211,238,0.5)]"
+                  style={{
+                    height: `${barHeight}px`,
+                    transform: `rotate(${rotation}deg) translateY(-84px)`,
+                    transformOrigin: 'bottom center',
+                    transition: 'height 0.08s ease-out'
+                  }}
+                />
+              );
+            })}
+          </div>
+
           {/* Inside Crosshair Dot */}
-          <div className="absolute inset-0 flex items-center justify-center z-10">
-            {profile?.useAvatarInEntrance && profile?.avatarValue ? (
-              <div className="relative w-36 h-36 rounded-full p-[3px] bg-gradient-to-tr from-cyan-400 via-purple-500 to-rose-500 shadow-[0_0_35px_rgba(6,182,212,0.35)] flex items-center justify-center">
-                <div className="w-full h-full rounded-full bg-[#050914] overflow-hidden border border-black/35 flex items-center justify-center">
-                  {profile.avatarType === 'emoji' ? (
-                    <span className="text-6xl drop-shadow-[0_0_12px_rgba(255,255,255,0.2)]">{profile.avatarValue}</span>
-                  ) : profile.avatarType === 'initial' ? (
-                    <span className="text-4xl font-mono font-black text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-rose-400">{profile.avatarValue}</span>
-                  ) : (
-                    <img src={profile.avatarValue} alt="Identity" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
-                  )}
+          <div className="absolute inset-0 flex items-center justify-center z-10" style={{ perspective: 1000 }}>
+            <motion.div
+              variants={logoVariants}
+              custom={progress}
+              animate={isLaunching ? "launching" : loadingFinished ? "finished" : "loading"}
+              className="relative flex items-center justify-center"
+            >
+              {profile?.useAvatarInEntrance && profile?.avatarValue ? (
+                <div className="relative w-36 h-36 rounded-full p-[3px] bg-gradient-to-tr from-cyan-400 via-purple-500 to-rose-500 shadow-[0_0_35px_rgba(6,182,212,0.35)] flex items-center justify-center">
+                  <div className="w-full h-full rounded-full bg-[#050914] overflow-hidden border border-black/35 flex items-center justify-center">
+                    {profile.avatarType === 'emoji' ? (
+                      <span className="text-6xl drop-shadow-[0_0_12px_rgba(255,255,255,0.2)]">{profile.avatarValue}</span>
+                    ) : profile.avatarType === 'initial' ? (
+                      <span className="text-4xl font-mono font-black text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-rose-400">{profile.avatarValue}</span>
+                    ) : (
+                      <img src={profile.avatarValue} alt="Identity" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+                    )}
+                  </div>
                 </div>
-              </div>
-            ) : (
-              <motion.div
-                animate={loadingFinished ? { scale: [1, 1.1, 1] } : {}}
-                transition={{ repeat: Infinity, duration: 1.5 }}
-              >
+              ) : (
                 <LKLogo size={145} glow={true} />
-              </motion.div>
-            )}
+              )}
+            </motion.div>
           </div>
 
           {/* Interactive cursor pointer lock sight display */}
@@ -387,10 +496,23 @@ export default function EntranceAnimation({
           initial={{ opacity: 0, y: 5 }}
           animate={{ opacity: 0.8, y: 0 }}
           transition={{ delay: 0.3, duration: 0.5 }}
-          className="text-[10px] md:text-xs tracking-[0.5em] text-cyan-300 font-extrabold uppercase mb-10"
+          className="text-[10px] md:text-xs tracking-[0.5em] text-cyan-300 font-extrabold uppercase mb-4"
         >
           {subtitle}
         </motion.p>
+
+        {/* Dynamic sound equalizer graphic */}
+        <div className="flex items-end justify-center gap-1.5 h-10 mb-8 relative select-none">
+          <div className="absolute top-0 text-[8px] font-mono text-cyan-400/40 tracking-[0.2em] uppercase font-bold">LIVE CORE SIGNAL SPECTRUM</div>
+          {eqHeights.map((height, i) => (
+            <motion.div
+              key={i}
+              className="w-[3px] rounded-full bg-gradient-to-t from-cyan-500 via-indigo-500 to-rose-400 shadow-[0_0_8px_rgba(6,182,212,0.4)]"
+              style={{ height: `${height}%` }}
+              transition={{ type: "spring", stiffness: 350, damping: 12 }}
+            />
+          ))}
+        </div>
 
         {/* 5. LIVE LOADING PROGRESS BAR */}
         <div className="w-full max-w-sm bg-[#060a14]/90 border border-cyan-500/10 rounded-2xl p-5 shadow-[0_0_30px_rgba(0,0,0,0.6)] relative">
