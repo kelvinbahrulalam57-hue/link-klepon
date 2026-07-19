@@ -35,6 +35,20 @@ export default function PratinjauHP({
 
   const filteredLinks = links.filter(l => {
     if (!l.isVisible) return false;
+
+    // Check scheduled publication times
+    if (l.isScheduled) {
+      const now = new Date();
+      if (l.scheduleStart) {
+        const start = new Date(l.scheduleStart);
+        if (now < start) return false;
+      }
+      if (l.scheduleEnd) {
+        const end = new Date(l.scheduleEnd);
+        if (now > end) return false;
+      }
+    }
+
     if (isStealthTriggered && stealthElementsToHide?.includes('links')) {
       const isContactOrCommunity = 
         ['kontak', 'komunitas', 'whatsapp', 'wa', 'tele', 'telegram', 'discord', 'grup', 'group', 'contact', 'community']

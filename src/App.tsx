@@ -12,6 +12,7 @@ import DesainTab from './components/DesainTab.tsx';
 import AnalitikTab from './components/AnalitikTab.tsx';
 import AdminTab from './components/AdminTab.tsx';
 import QRBackupTab from './components/QRBackupTab.tsx';
+import SeoTab from './components/SeoTab.tsx';
 import PratinjauHP from './components/PratinjauHP.tsx';
 import LandingPage from './components/LandingPage.tsx';
 import EntranceAnimation from './components/EntranceAnimation.tsx';
@@ -143,8 +144,72 @@ export default function App() {
   // Editor admin themes: 'slate' | 'gold' | 'sage' (matches screenshot Image 4)
   const [adminStyle, setAdminStyle] = useState<'slate' | 'gold' | 'sage'>('slate');
 
+  // 'auto' (detect system OS) | 'dark' | 'light'
+  const [editorThemeMode, setEditorThemeMode] = useState<'auto' | 'dark' | 'light'>(() => {
+    return (localStorage.getItem('link_klepon_editor_theme_mode') as 'auto' | 'dark' | 'light') || 'auto';
+  });
+
+  const [systemTheme, setSystemTheme] = useState<'light' | 'dark'>(() => {
+    if (typeof window !== 'undefined' && window.matchMedia) {
+      return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+    }
+    return 'dark';
+  });
+
+  useEffect(() => {
+    localStorage.setItem('link_klepon_editor_theme_mode', editorThemeMode);
+  }, [editorThemeMode]);
+
+  useEffect(() => {
+    if (typeof window === 'undefined' || !window.matchMedia) return;
+    const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
+    const handleChange = (e: MediaQueryListEvent) => {
+      setSystemTheme(e.matches ? 'dark' : 'light');
+    };
+    if (mediaQuery.addEventListener) {
+      mediaQuery.addEventListener('change', handleChange);
+      return () => mediaQuery.removeEventListener('change', handleChange);
+    } else {
+      mediaQuery.addListener(handleChange);
+      return () => mediaQuery.removeListener(handleChange);
+    }
+  }, []);
+
+  const resolvedTheme = editorThemeMode === 'auto' ? systemTheme : editorThemeMode;
+
+  // Dynamic Document Title and Meta tags synchronization for SEO
+  useEffect(() => {
+    document.title = appState.profile.metaTitle || appState.profile.name || "Link Klepon";
+    
+    // Update or create meta description tag
+    let metaDesc = document.querySelector('meta[name="description"]');
+    if (!metaDesc) {
+      metaDesc = document.createElement('meta');
+      metaDesc.setAttribute('name', 'description');
+      document.head.appendChild(metaDesc);
+    }
+    metaDesc.setAttribute('content', appState.profile.metaDescription || appState.profile.bio || "Link Klepon Bio");
+
+    // Update or create Open Graph meta tags for social preview
+    const ogTags = {
+      'og:title': appState.profile.metaTitle || appState.profile.name || "Link Klepon",
+      'og:description': appState.profile.metaDescription || appState.profile.bio || "Link Klepon Bio",
+      'og:image': appState.profile.metaImage || 'https://images.unsplash.com/photo-1557683316-973673baf926?q=80&w=600',
+    };
+
+    Object.entries(ogTags).forEach(([property, content]) => {
+      let ogMeta = document.querySelector(`meta[property="${property}"]`);
+      if (!ogMeta) {
+        ogMeta = document.createElement('meta');
+        ogMeta.setAttribute('property', property);
+        document.head.appendChild(ogMeta);
+      }
+      ogMeta.setAttribute('content', content);
+    });
+  }, [appState.profile.metaTitle, appState.profile.metaDescription, appState.profile.metaImage, appState.profile.name, appState.profile.bio]);
+
   // Currently active editor tab (matches screenshot tabs)
-  const [activeTab, setActiveTab] = useState<'tautan' | 'profil' | 'desain' | 'analitik' | 'admin' | 'qr_backup'>('tautan');
+  const [activeTab, setActiveTab] = useState<'tautan' | 'profil' | 'desain' | 'analitik' | 'admin' | 'qr_backup' | 'seo'>('tautan');
 
   // Authentication state for hidden admin login
   const [isAdminLogged, setIsAdminLogged] = useState<boolean>(() => {
@@ -352,10 +417,10 @@ export default function App() {
       ) : appMode === 'public' ? (
         <motion.div
           key="public"
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-          transition={{ duration: 0.4 }}
+          initial={{ opacity: 0, scale: 0.98, filter: 'blur(8px)', y: 10 }}
+          animate={{ opacity: 1, scale: 1, filter: 'blur(0px)', y: 0 }}
+          exit={{ opacity: 0, scale: 1.02, filter: 'blur(8px)', y: -10 }}
+          transition={{ duration: 0.45, ease: [0.16, 1, 0.3, 1] }}
           className="min-h-screen"
         >
           <LandingPage
@@ -385,11 +450,11 @@ export default function App() {
       ) : (
         <motion.div
           key="editor"
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-          transition={{ duration: 0.4 }}
-          className={`min-h-screen text-slate-100 flex flex-col justify-between transition-colors duration-500 ${style.bg}`}
+          initial={{ opacity: 0, scale: 0.98, filter: 'blur(8px)', y: 10 }}
+          animate={{ opacity: 1, scale: 1, filter: 'blur(0px)', y: 0 }}
+          exit={{ opacity: 0, scale: 1.02, filter: 'blur(8px)', y: -10 }}
+          transition={{ duration: 0.45, ease: [0.16, 1, 0.3, 1] }}
+          className={`min-h-screen flex flex-col justify-between transition-colors duration-500 ${resolvedTheme === 'light' ? 'editor-light' : 'editor-dark'} admin-style-${adminStyle} ${style.bg}`}
         >
           {/* Top Header Section (Matches Layout in Mockup images) */}
           <header className="bg-[#050810] border-b border-slate-900 px-6 py-4 flex flex-col md:flex-row items-stretch md:items-center justify-between gap-4 select-none">
@@ -417,6 +482,49 @@ export default function App() {
               <div className="flex items-center gap-1.5 px-3 py-1.5 bg-[#1a1308] border border-amber-500/20 rounded-lg text-amber-400 font-bold">
                 <span className="w-1.5 h-1.5 rounded-full bg-amber-500" />
                 <span>Aktif: ADMIN_KLEPON_PRO</span>
+              </div>
+
+              {/* OS Theme Auto/Light/Dark Selector Badge */}
+              <div className="flex items-center gap-1 p-1 bg-slate-950/80 border border-slate-800 rounded-lg text-slate-300">
+                <button
+                  onClick={() => {
+                    setEditorThemeMode('auto');
+                    triggerPushNotification("Tema Editor: Auto 🖥️", "Mengikuti preferensi sistem operasi.");
+                  }}
+                  className={`px-2 py-1 text-[10px] font-black uppercase rounded-md flex items-center gap-1 transition-all cursor-pointer ${
+                    editorThemeMode === 'auto' ? 'bg-cyan-500 text-slate-950 font-black' : 'hover:text-white'
+                  }`}
+                  title="Deteksi Sistem OS"
+                >
+                  <Icons.Monitor className="w-3 h-3" />
+                  <span>Auto</span>
+                </button>
+                <button
+                  onClick={() => {
+                    setEditorThemeMode('dark');
+                    triggerPushNotification("Tema Editor: Gelap 🌙", "Mode gelap premium diaktifkan.");
+                  }}
+                  className={`px-2 py-1 text-[10px] font-black uppercase rounded-md flex items-center gap-1 transition-all cursor-pointer ${
+                    editorThemeMode === 'dark' ? 'bg-cyan-500 text-slate-950 font-black' : 'hover:text-white'
+                  }`}
+                  title="Tema Gelap"
+                >
+                  <Icons.Moon className="w-3 h-3" />
+                  <span>Dark</span>
+                </button>
+                <button
+                  onClick={() => {
+                    setEditorThemeMode('light');
+                    triggerPushNotification("Tema Editor: Terang ☀️", "Mode terang premium diaktifkan.");
+                  }}
+                  className={`px-2 py-1 text-[10px] font-black uppercase rounded-md flex items-center gap-1 transition-all cursor-pointer ${
+                    editorThemeMode === 'light' ? 'bg-cyan-500 text-slate-950 font-black' : 'hover:text-white'
+                  }`}
+                  title="Tema Terang"
+                >
+                  <Icons.Sun className="w-3 h-3" />
+                  <span>Light</span>
+                </button>
               </div>
 
               {/* Action buttons */}
@@ -486,134 +594,178 @@ export default function App() {
           </header>
 
           {/* Main Clean Centered Cockpit Container */}
-          <main className="flex-1 max-w-4xl w-full mx-auto p-4 md:p-6 flex flex-col space-y-4 items-stretch">
-            {/* Navigation Tab list (Matches Layout in Mockup images) */}
-            <nav className="flex flex-wrap gap-1 bg-[#070b13] p-1 border border-slate-800 rounded-xl overflow-x-auto">
-              <button
-                onClick={() => setActiveTab('tautan')}
-                className={`flex items-center gap-1.5 px-3.5 py-2.5 rounded-lg text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${
-                  activeTab === 'tautan' ? 'bg-[#151f38] text-cyan-400 border border-cyan-500/30' : 'text-slate-400 hover:text-white'
-                }`}
-              >
-                <Icons.Link2 className="w-4 h-4" />
-                <span>Tautan</span>
-              </button>
-              <button
-                onClick={() => setActiveTab('profil')}
-                className={`flex items-center gap-1.5 px-3.5 py-2.5 rounded-lg text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${
-                  activeTab === 'profil' ? 'bg-[#151f38] text-cyan-400 border border-cyan-500/30' : 'text-slate-400 hover:text-white'
-                }`}
-              >
-                <Icons.User className="w-4 h-4" />
-                <span>Profil</span>
-              </button>
-              <button
-                onClick={() => setActiveTab('desain')}
-                className={`flex items-center gap-1.5 px-3.5 py-2.5 rounded-lg text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${
-                  activeTab === 'desain' ? 'bg-[#151f38] text-cyan-400 border border-cyan-500/30' : 'text-slate-400 hover:text-white'
-                }`}
-              >
-                <Icons.Palette className="w-4 h-4" />
-                <span>Desain & Tema</span>
-              </button>
-              <button
-                onClick={() => setActiveTab('analitik')}
-                className={`flex items-center gap-1.5 px-3.5 py-2.5 rounded-lg text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${
-                  activeTab === 'analitik' ? 'bg-[#151f38] text-cyan-400 border border-cyan-500/30' : 'text-slate-400 hover:text-white'
-                }`}
-              >
-                <Icons.LineChart className="w-4 h-4" />
-                <span>Analitik</span>
-              </button>
-              <button
-                onClick={() => setActiveTab('admin')}
-                className={`flex items-center gap-1.5 px-3.5 py-2.5 rounded-lg text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${
-                  activeTab === 'admin' ? 'bg-[#151f38] text-cyan-400 border border-cyan-500/30' : 'text-slate-400 hover:text-white'
-                }`}
-              >
-                <Icons.ShieldAlert className="w-4 h-4" />
-                <span>Dashboard Admin 🛠</span>
-              </button>
-              <button
-                onClick={() => setActiveTab('qr_backup')}
-                className={`flex items-center gap-1.5 px-3.5 py-2.5 rounded-lg text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${
-                  activeTab === 'qr_backup' ? 'bg-[#151f38] text-cyan-400 border border-cyan-500/30' : 'text-slate-400 hover:text-white'
-                }`}
-              >
-                <Icons.QrCode className="w-4 h-4" />
-                <span>QR & Backup</span>
-              </button>
-            </nav>
+          <main className="flex-1 max-w-7xl w-full mx-auto p-4 md:p-6">
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+              
+              {/* Left Column: Editor Tabs and Controls */}
+              <div className="lg:col-span-7 xl:col-span-8 flex flex-col space-y-4 items-stretch">
+                {/* Navigation Tab list (Matches Layout in Mockup images) */}
+                <nav className="flex flex-wrap gap-1 bg-[#070b13] p-1 border border-slate-800 rounded-xl overflow-x-auto">
+                  <button
+                    onClick={() => setActiveTab('tautan')}
+                    className={`flex items-center gap-1.5 px-3.5 py-2.5 rounded-lg text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${
+                      activeTab === 'tautan' ? 'bg-[#151f38] text-cyan-400 border border-cyan-500/30' : 'text-slate-400 hover:text-white'
+                    }`}
+                  >
+                    <Icons.Link2 className="w-4 h-4" />
+                    <span>Tautan</span>
+                  </button>
+                  <button
+                    onClick={() => setActiveTab('profil')}
+                    className={`flex items-center gap-1.5 px-3.5 py-2.5 rounded-lg text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${
+                      activeTab === 'profil' ? 'bg-[#151f38] text-cyan-400 border border-cyan-500/30' : 'text-slate-400 hover:text-white'
+                    }`}
+                  >
+                    <Icons.User className="w-4 h-4" />
+                    <span>Profil</span>
+                  </button>
+                  <button
+                    onClick={() => setActiveTab('seo')}
+                    className={`flex items-center gap-1.5 px-3.5 py-2.5 rounded-lg text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${
+                      activeTab === 'seo' ? 'bg-[#151f38] text-cyan-400 border border-cyan-500/30' : 'text-slate-400 hover:text-white'
+                    }`}
+                  >
+                    <Icons.SearchCode className="w-4 h-4" />
+                    <span>Pengaturan SEO</span>
+                  </button>
+                  <button
+                    onClick={() => setActiveTab('desain')}
+                    className={`flex items-center gap-1.5 px-3.5 py-2.5 rounded-lg text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${
+                      activeTab === 'desain' ? 'bg-[#151f38] text-cyan-400 border border-cyan-500/30' : 'text-slate-400 hover:text-white'
+                    }`}
+                  >
+                    <Icons.Palette className="w-4 h-4" />
+                    <span>Desain & Tema</span>
+                  </button>
+                  <button
+                    onClick={() => setActiveTab('analitik')}
+                    className={`flex items-center gap-1.5 px-3.5 py-2.5 rounded-lg text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${
+                      activeTab === 'analitik' ? 'bg-[#151f38] text-cyan-400 border border-cyan-500/30' : 'text-slate-400 hover:text-white'
+                    }`}
+                  >
+                    <Icons.LineChart className="w-4 h-4" />
+                    <span>Analitik</span>
+                  </button>
+                  <button
+                    onClick={() => setActiveTab('admin')}
+                    className={`flex items-center gap-1.5 px-3.5 py-2.5 rounded-lg text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${
+                      activeTab === 'admin' ? 'bg-[#151f38] text-cyan-400 border border-cyan-500/30' : 'text-slate-400 hover:text-white'
+                    }`}
+                  >
+                    <Icons.ShieldAlert className="w-4 h-4" />
+                    <span>Dashboard Admin 🛠</span>
+                  </button>
+                  <button
+                    onClick={() => setActiveTab('qr_backup')}
+                    className={`flex items-center gap-1.5 px-3.5 py-2.5 rounded-lg text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${
+                      activeTab === 'qr_backup' ? 'bg-[#151f38] text-cyan-400 border border-cyan-500/30' : 'text-slate-400 hover:text-white'
+                    }`}
+                  >
+                    <Icons.QrCode className="w-4 h-4" />
+                    <span>QR & Backup</span>
+                  </button>
+                </nav>
 
-            {/* Active Tab rendering router with elegant Framer Motion transitions */}
-            <div className="min-h-[480px] relative">
-              <AnimatePresence mode="wait">
-                <motion.div
-                  key={activeTab}
-                  initial={{ opacity: 0, y: 15 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -15 }}
-                  transition={{ duration: 0.25, ease: "easeInOut" }}
-                >
-                  {activeTab === 'tautan' && (
-                    <TautanTab
-                      links={appState.links}
-                      onChange={(links) => setAppState(prev => ({ ...prev, links }))}
-                      onLogSuspiciousActivity={handleLogSuspiciousActivity}
-                    />
-                  )}
-                  {activeTab === 'profil' && (
-                    <ProfilTab
-                      profile={appState.profile}
-                      onChange={(profile) => setAppState(prev => ({ ...prev, profile }))}
-                    />
-                  )}
-                  {activeTab === 'desain' && (
-                    <DesainTab
-                      theme={appState.theme}
-                      onChange={(theme) => setAppState(prev => ({ ...prev, theme }))}
-                      adminStyle={adminStyle}
-                      onAdminStyleChange={(s) => setAdminStyle(s)}
-                    />
-                  )}
-                  {activeTab === 'analitik' && (
-                    <AnalitikTab
-                      links={appState.links}
-                      analytics={appState.analytics}
-                      onResetClicks={handleResetClicks}
-                    />
-                  )}
-                  {activeTab === 'admin' && (
-                    <AdminTab
-                      isTwoFactorEnabled={appState.isTwoFactorEnabled}
-                      onToggleTwoFactor={(enabled) => setAppState(prev => ({ ...prev, isTwoFactorEnabled: enabled }))}
-                      isEndToEndEncrypted={appState.isEndToEndEncrypted}
-                      onToggleEndToEnd={(enabled) => setAppState(prev => ({ ...prev, isEndToEndEncrypted: enabled }))}
-                      suspiciousLogs={suspiciousLogs}
-                      onClearLogs={() => setSuspiciousLogs([])}
-                      onTriggerPushNotification={triggerPushNotification}
-                      adminPasswordHash={appState.adminPasswordHash}
-                      onUpdatePassword={(newPass) => setAppState(prev => ({ ...prev, adminPasswordHash: newPass }))}
-                      isStealthModeActive={appState.isStealthModeActive}
-                      onToggleStealthMode={(enabled) => setAppState(prev => ({ ...prev, isStealthModeActive: enabled }))}
-                      stealthAllowedLocation={appState.stealthAllowedLocation}
-                      onUpdateStealthAllowedLocation={(loc) => setAppState(prev => ({ ...prev, stealthAllowedLocation: loc }))}
-                      stealthElementsToHide={appState.stealthElementsToHide}
-                      onUpdateStealthElementsToHide={(elements) => setAppState(prev => ({ ...prev, stealthElementsToHide: elements }))}
-                      simulatedLocation={simulatedLocation}
-                      onUpdateSimulatedLocation={(loc) => setSimulatedLocation(loc)}
-                    />
-                  )}
-                  {activeTab === 'qr_backup' && (
-                    <QRBackupTab
-                      appUrl={window.location.href}
-                      onImportBackup={handleImportBackup}
-                      onExportBackup={handleExportBackup}
-                      onTriggerPushNotification={triggerPushNotification}
-                    />
-                  )}
-                </motion.div>
-              </AnimatePresence>
+                {/* Active Tab rendering router with elegant Framer Motion transitions */}
+                <div className="min-h-[480px] relative">
+                  <AnimatePresence mode="wait">
+                    <motion.div
+                      key={activeTab}
+                      initial={{ opacity: 0, y: 15 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: -15 }}
+                      transition={{ duration: 0.25, ease: "easeInOut" }}
+                    >
+                      {activeTab === 'tautan' && (
+                        <TautanTab
+                          links={appState.links}
+                          onChange={(links) => setAppState(prev => ({ ...prev, links }))}
+                          onLogSuspiciousActivity={handleLogSuspiciousActivity}
+                        />
+                      )}
+                      {activeTab === 'profil' && (
+                        <ProfilTab
+                          profile={appState.profile}
+                          onChange={(profile) => setAppState(prev => ({ ...prev, profile }))}
+                        />
+                      )}
+                      {activeTab === 'seo' && (
+                        <SeoTab
+                          profile={appState.profile}
+                          onChange={(profile) => setAppState(prev => ({ ...prev, profile }))}
+                        />
+                      )}
+                      {activeTab === 'desain' && (
+                        <DesainTab
+                          theme={appState.theme}
+                          onChange={(theme) => setAppState(prev => ({ ...prev, theme }))}
+                          adminStyle={adminStyle}
+                          onAdminStyleChange={(s) => setAdminStyle(s)}
+                          editorThemeMode={editorThemeMode}
+                          onEditorThemeModeChange={setEditorThemeMode}
+                        />
+                      )}
+                      {activeTab === 'analitik' && (
+                        <AnalitikTab
+                          links={appState.links}
+                          analytics={appState.analytics}
+                          onResetClicks={handleResetClicks}
+                        />
+                      )}
+                      {activeTab === 'admin' && (
+                        <AdminTab
+                          isTwoFactorEnabled={appState.isTwoFactorEnabled}
+                          onToggleTwoFactor={(enabled) => setAppState(prev => ({ ...prev, isTwoFactorEnabled: enabled }))}
+                          isEndToEndEncrypted={appState.isEndToEndEncrypted}
+                          onToggleEndToEnd={(enabled) => setAppState(prev => ({ ...prev, isEndToEndEncrypted: enabled }))}
+                          suspiciousLogs={suspiciousLogs}
+                          onClearLogs={() => setSuspiciousLogs([])}
+                          onTriggerPushNotification={triggerPushNotification}
+                          adminPasswordHash={appState.adminPasswordHash}
+                          onUpdatePassword={(newPass) => setAppState(prev => ({ ...prev, adminPasswordHash: newPass }))}
+                          isStealthModeActive={appState.isStealthModeActive}
+                          onToggleStealthMode={(enabled) => setAppState(prev => ({ ...prev, isStealthModeActive: enabled }))}
+                          stealthAllowedLocation={appState.stealthAllowedLocation}
+                          onUpdateStealthAllowedLocation={(loc) => setAppState(prev => ({ ...prev, stealthAllowedLocation: loc }))}
+                          stealthElementsToHide={appState.stealthElementsToHide}
+                          onUpdateStealthElementsToHide={(elements) => setAppState(prev => ({ ...prev, stealthElementsToHide: elements }))}
+                          simulatedLocation={simulatedLocation}
+                          onUpdateSimulatedLocation={(loc) => setSimulatedLocation(loc)}
+                        />
+                      )}
+                      {activeTab === 'qr_backup' && (
+                        <QRBackupTab
+                          appUrl={window.location.href}
+                          onImportBackup={handleImportBackup}
+                          onExportBackup={handleExportBackup}
+                          onTriggerPushNotification={triggerPushNotification}
+                        />
+                      )}
+                    </motion.div>
+                  </AnimatePresence>
+                </div>
+              </div>
+
+              {/* Right Column: Sticky Live Smartphone Preview (Permanently visible on lg screens) */}
+              <div className="hidden lg:flex lg:col-span-5 xl:col-span-4 justify-center sticky top-6">
+                <div className="bg-[#070b13]/60 border border-slate-800 p-6 rounded-[32px] backdrop-blur-md flex flex-col items-center shadow-2xl w-full">
+                  <div className="text-cyan-400 flex items-center gap-2 mb-4 shrink-0 select-none">
+                    <Icons.Smartphone className="w-5 h-5 animate-pulse" />
+                    <h3 className="text-xs font-black tracking-widest uppercase">Live Pratinjau HP</h3>
+                  </div>
+                  <PratinjauHP
+                    profile={appState.profile}
+                    theme={appState.theme}
+                    links={appState.links}
+                    onLinkClick={handleLinkClick}
+                    isStealthModeActive={appState.isStealthModeActive}
+                    stealthAllowedLocation={appState.stealthAllowedLocation}
+                    stealthElementsToHide={appState.stealthElementsToHide}
+                    simulatedLocation={simulatedLocation}
+                  />
+                </div>
+              </div>
+
             </div>
           </main>
 
@@ -656,7 +808,7 @@ export default function App() {
           {/* Floating Live Preview Toggle Button */}
           <button
             onClick={() => setShowPreviewDrawer(true)}
-            className="fixed bottom-6 right-6 z-40 bg-cyan-500 hover:bg-cyan-600 text-slate-950 font-black px-4 py-3 rounded-full shadow-[0_0_20px_rgba(6,182,212,0.4)] transition-all flex items-center gap-2 hover:scale-105 active:scale-95 cursor-pointer"
+            className="lg:hidden fixed bottom-6 right-6 z-40 bg-cyan-500 hover:bg-cyan-600 text-slate-950 font-black px-4 py-3 rounded-full shadow-[0_0_20px_rgba(6,182,212,0.4)] transition-all flex items-center gap-2 hover:scale-105 active:scale-95 cursor-pointer"
             title="Buka Pratinjau HP"
           >
             <Icons.Smartphone className="w-4 h-4 animate-bounce" style={{ animationDuration: '3s' }} />

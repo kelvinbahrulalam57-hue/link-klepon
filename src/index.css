@@ -13,3 +13,193 @@
   }
 }
 
+/* ==========================================
+   HIGH-END EDITOR LIGHT MODE THEME OVERRIDES
+   ========================================== */
+
+/* Outer app container & text color */
+.editor-light {
+  background-color: #f8fafc !important;
+  color: #0f172a !important;
+}
+
+/* Header styling */
+.editor-light header {
+  background-color: #ffffff !important;
+  border-color: #e2e8f0 !important;
+  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.05);
+}
+
+.editor-light header h1 {
+  color: #0f172a !important;
+}
+
+.editor-light header p {
+  color: #475569 !important;
+}
+
+/* Footer styling */
+.editor-light footer {
+  background-color: #ffffff !important;
+  border-color: #e2e8f0 !important;
+  color: #475569 !important;
+}
+
+/* Navigation tabs bar */
+.editor-light nav {
+  background-color: #f1f5f9 !important;
+  border-color: #cbd5e1 !important;
+}
+
+.editor-light nav button {
+  color: #475569 !important;
+}
+
+.editor-light nav button:hover {
+  color: #0f172a !important;
+  background-color: rgba(15, 23, 42, 0.04) !important;
+}
+
+/* Selected active tab button */
+.editor-light nav button.bg-\[\#151f38\] {
+  background-color: #ffffff !important;
+  border-color: #cbd5e1 !important;
+  color: #0891b2 !important; /* cyan-600 accent */
+  box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+}
+
+/* All panel cards, section boxes, and containers */
+.editor-light .bg-\[\#0b1329\],
+.editor-light .bg-\[\#070b13\],
+.editor-light .bg-\[\#121c33\],
+.editor-light .bg-\[\#151f38\],
+.editor-light .bg-\[\#050810\],
+.editor-light .bg-slate-950,
+.editor-light .bg-slate-900,
+.editor-light .bg-[#0b1329],
+.editor-light .bg-[#070b13],
+.editor-light .bg-[#121c33],
+.editor-light .bg-[#151f38],
+.editor-light .bg-[#050810] {
+  background-color: #ffffff !important;
+  color: #0f172a !important;
+  border-color: #e2e8f0 !important;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
+}
+
+/* Inner nested sub-boxes (e.g. lists, options blocks, log lists) */
+.editor-light .bg-slate-950\/40,
+.editor-light .bg-slate-950\/50,
+.editor-light .bg-[#030611],
+.editor-light .bg-[#040810],
+.editor-light .bg-[#0e172a],
+.editor-light .bg-[#091520],
+.editor-light .bg-[#1a1308],
+.editor-light .bg-slate-950\/60,
+.editor-light .bg-slate-900\/60,
+.editor-light .bg-slate-900\/95 {
+  background-color: #f8fafc !important;
+  color: #0f172a !important;
+  border-color: #e2e8f0 !important;
+}
+
+/* Subtle secondary buttons & action triggers */
+.editor-light button.bg-slate-900,
+.editor-light button.bg-slate-800,
+.editor-light button.bg-slate-950 {
+  background-color: #f1f5f9 !important;
+  color: #334155 !important;
+  border-color: #e2e8f0 !important;
+}
+
+.editor-light button.bg-slate-900:hover,
+.editor-light button.bg-slate-800:hover,
+.editor-light button.bg-slate-950:hover {
+  background-color: #e2e8f0 !important;
+  color: #0f172a !important;
+}
+
+/* Inputs, Textareas, Select elements */
+.editor-light input,
+.editor-light textarea,
+.editor-light select {
+  background-color: #ffffff !important;
+  color: #0f172a !important;
+  border-color: #cbd5e1 !important;
+}
+
+.editor-light input::placeholder,
+.editor-light textarea::placeholder {
+  color: #94a3b8 !important;
+}
+
+.editor-light input:focus,
+.editor-light textarea:focus {
+  border-color: #0891b2 !important;
+  outline: 2px solid transparent !important;
+}
+
+/* General border color overrides */
+.editor-light .border-slate-800,
+.editor-light .border-slate-900,
+.editor-light .border-cyan-500\/15,
+.editor-light .border-cyan-500\/30,
+.editor-light .border-cyan-500\/25,
+.editor-light .border-cyan-500\/20,
+.editor-light .border-emerald-500\/20,
+.editor-light .border-amber-500\/20 {
+  border-color: #e2e8f0 !important;
+}
+
+/* Contrast adjustment for texts */
+.editor-light .text-slate-100,
+.editor-light .text-slate-300,
+.editor-light .text-white {
+  color: #0f172a !important;
+}
+
+.editor-light .text-slate-400 {
+  color: #475569 !important;
+}
+
+.editor-light .text-slate-500 {
+  color: #64748b !important;
+}
+
+.editor-light .text-slate-600 {
+  color: #475569 !important;
+}
+
+/* Adjust title badges inside sections */
+.editor-light h3.text-slate-300 {
+  color: #1e293b !important;
+}
+
+/* Admin specific light variants override */
+.editor-light.admin-style-gold {
+  background-color: #faf6ee !important;
+}
+
+.editor-light.admin-style-gold nav button.bg-\[\#151f38\] {
+  color: #b45309 !important; /* amber-700 */
+}
+
+.editor-light.admin-style-gold .bg-\[\#1a1308\] {
+  background-color: #fef3c7 !important;
+  color: #b45309 !important;
+}
+
+.editor-light.admin-style-sage {
+  background-color: #f4faf6 !important;
+}
+
+.editor-light.admin-style-sage nav button.bg-\[\#151f38\] {
+  color: #047857 !important; /* emerald-700 */
+}
+
+.editor-light.admin-style-sage .bg-\[\#111714\] {
+  background-color: #d1fae5 !important;
+  color: #047857 !important;
+}
+
+

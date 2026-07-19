@@ -19,9 +19,18 @@ interface DesainTabProps {
   onChange: (updatedTheme: ThemeConfig) => void;
   adminStyle: 'slate' | 'gold' | 'sage';
   onAdminStyleChange: (style: 'slate' | 'gold' | 'sage') => void;
+  editorThemeMode: 'auto' | 'dark' | 'light';
+  onEditorThemeModeChange: (mode: 'auto' | 'dark' | 'light') => void;
 }
 
-export default function DesainTab({ theme, onChange, adminStyle, onAdminStyleChange }: DesainTabProps) {
+export default function DesainTab({ 
+  theme, 
+  onChange, 
+  adminStyle, 
+  onAdminStyleChange,
+  editorThemeMode,
+  onEditorThemeModeChange
+}: DesainTabProps) {
 
   const handleUpdate = (field: keyof ThemeConfig, value: any) => {
     onChange({
@@ -127,40 +136,86 @@ export default function DesainTab({ theme, onChange, adminStyle, onAdminStyleCha
 
       {/* Gaya Warna Dashboard Admin (Tema Tampilan Admin) */}
       <div className="bg-[#0b1329] border border-cyan-500/10 rounded-xl p-5 shadow-xl">
-        <h3 className="text-sm font-semibold tracking-wide text-slate-300 flex items-center gap-2 mb-2">
-          <Icons.LayoutGrid className="w-4 h-4 text-cyan-400" />
-          GAYA WARNA DASHBOARD ADMIN (TEMA TAMPILAN ADMIN)
-        </h3>
-        <p className="text-xs text-slate-400 mb-4">Sesuaikan warna tampilan halaman admin/dashboard ini dengan mood Anda!</p>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          
+          {/* Left Column: Color Palette Option */}
+          <div>
+            <h3 className="text-sm font-semibold tracking-wide text-slate-300 flex items-center gap-2 mb-2">
+              <Icons.LayoutGrid className="w-4 h-4 text-cyan-400" />
+              GAYA WARNA DASHBOARD ADMIN
+            </h3>
+            <p className="text-xs text-slate-400 mb-4">Sesuaikan warna tampilan halaman admin/dashboard ini dengan mood Anda!</p>
 
-        <div className="grid grid-cols-3 gap-3">
-          <button
-            onClick={() => onAdminStyleChange('slate')}
-            className={`p-2.5 rounded-lg border text-xs font-semibold flex items-center justify-center gap-1.5 cursor-pointer transition-all ${
-              adminStyle === 'slate' ? 'bg-cyan-500/10 border-cyan-400 text-cyan-400' : 'bg-[#121c33] border-slate-800 text-slate-400 hover:text-white'
-            }`}
-          >
-            <div className="w-2.5 h-2.5 rounded-full bg-cyan-500" />
-            Slate Blue 🌊
-          </button>
-          <button
-            onClick={() => onAdminStyleChange('gold')}
-            className={`p-2.5 rounded-lg border text-xs font-semibold flex items-center justify-center gap-1.5 cursor-pointer transition-all ${
-              adminStyle === 'gold' ? 'bg-amber-500/10 border-amber-400 text-amber-400' : 'bg-[#121c33] border-slate-800 text-slate-400 hover:text-white'
-            }`}
-          >
-            <div className="w-2.5 h-2.5 rounded-full bg-amber-500" />
-            Espresso Gold ☕
-          </button>
-          <button
-            onClick={() => onAdminStyleChange('sage')}
-            className={`p-2.5 rounded-lg border text-xs font-semibold flex items-center justify-center gap-1.5 cursor-pointer transition-all ${
-              adminStyle === 'sage' ? 'bg-emerald-500/10 border-emerald-400 text-emerald-400' : 'bg-[#121c33] border-slate-800 text-slate-400 hover:text-white'
-            }`}
-          >
-            <div className="w-2.5 h-2.5 rounded-full bg-emerald-500" />
-            Serene Sage 🌿
-          </button>
+            <div className="grid grid-cols-3 gap-2.5">
+              <button
+                onClick={() => onAdminStyleChange('slate')}
+                className={`p-2.5 rounded-lg border text-xs font-semibold flex items-center justify-center gap-1.5 cursor-pointer transition-all ${
+                  adminStyle === 'slate' ? 'bg-cyan-500/10 border-cyan-400 text-cyan-400' : 'bg-[#121c33] border-slate-800 text-slate-400 hover:text-white'
+                }`}
+              >
+                <div className="w-2.5 h-2.5 rounded-full bg-cyan-500" />
+                Slate 🌊
+              </button>
+              <button
+                onClick={() => onAdminStyleChange('gold')}
+                className={`p-2.5 rounded-lg border text-xs font-semibold flex items-center justify-center gap-1.5 cursor-pointer transition-all ${
+                  adminStyle === 'gold' ? 'bg-amber-500/10 border-amber-400 text-amber-400' : 'bg-[#121c33] border-slate-800 text-slate-400 hover:text-white'
+                }`}
+              >
+                <div className="w-2.5 h-2.5 rounded-full bg-amber-500" />
+                Gold ☕
+              </button>
+              <button
+                onClick={() => onAdminStyleChange('sage')}
+                className={`p-2.5 rounded-lg border text-xs font-semibold flex items-center justify-center gap-1.5 cursor-pointer transition-all ${
+                  adminStyle === 'sage' ? 'bg-emerald-500/10 border-emerald-400 text-emerald-400' : 'bg-[#121c33] border-slate-800 text-slate-400 hover:text-white'
+                }`}
+              >
+                <div className="w-2.5 h-2.5 rounded-full bg-emerald-500" />
+                Sage 🌿
+              </button>
+            </div>
+          </div>
+
+          {/* Right Column: Dark/Light Mode Option */}
+          <div className="border-t md:border-t-0 md:border-l border-slate-800 pt-5 md:pt-0 md:pl-6">
+            <h3 className="text-sm font-semibold tracking-wide text-slate-300 flex items-center gap-2 mb-2">
+              <Icons.SunMoon className="w-4 h-4 text-cyan-400" />
+              SINKRONISASI TEMA COCKPIT
+            </h3>
+            <p className="text-xs text-slate-400 mb-4">Ubah tampilan antara mode terang dan gelap, atau ikuti preferensi otomatis sistem OS Anda!</p>
+
+            <div className="grid grid-cols-3 gap-2.5">
+              <button
+                onClick={() => onEditorThemeModeChange('auto')}
+                className={`p-2.5 rounded-lg border text-xs font-semibold flex items-center justify-center gap-1.5 cursor-pointer transition-all ${
+                  editorThemeMode === 'auto' ? 'bg-cyan-500/10 border-cyan-400 text-cyan-400' : 'bg-[#121c33] border-slate-800 text-slate-400 hover:text-white'
+                }`}
+              >
+                <Icons.Monitor className="w-3.5 h-3.5" />
+                Auto
+              </button>
+              <button
+                onClick={() => onEditorThemeModeChange('dark')}
+                className={`p-2.5 rounded-lg border text-xs font-semibold flex items-center justify-center gap-1.5 cursor-pointer transition-all ${
+                  editorThemeMode === 'dark' ? 'bg-cyan-500/10 border-cyan-400 text-cyan-400' : 'bg-[#121c33] border-slate-800 text-slate-400 hover:text-white'
+                }`}
+              >
+                <Icons.Moon className="w-3.5 h-3.5" />
+                Gelap
+              </button>
+              <button
+                onClick={() => onEditorThemeModeChange('light')}
+                className={`p-2.5 rounded-lg border text-xs font-semibold flex items-center justify-center gap-1.5 cursor-pointer transition-all ${
+                  editorThemeMode === 'light' ? 'bg-cyan-500/10 border-cyan-400 text-cyan-400' : 'bg-[#121c33] border-slate-800 text-slate-400 hover:text-white'
+                }`}
+              >
+                <Icons.Sun className="w-3.5 h-3.5" />
+                Terang
+              </button>
+            </div>
+          </div>
+
         </div>
       </div>
 

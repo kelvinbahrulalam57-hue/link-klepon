@@ -23,6 +23,7 @@ export interface ProfileData {
   favicon?: string;
   metaTitle?: string;
   metaDescription?: string;
+  metaImage?: string;
 }
 
 export interface ThemeConfig {
@@ -49,6 +50,9 @@ export interface LinkItem {
   animation: string;
   imageType?: 'icon' | 'upload';
   imageValue?: string;
+  isScheduled?: boolean;
+  scheduleStart?: string; // ISO datetime string or YYYY-MM-DDTHH:mm
+  scheduleEnd?: string;   // ISO datetime string or YYYY-MM-DDTHH:mm
 }
 
 export interface AnalyticsRecord {

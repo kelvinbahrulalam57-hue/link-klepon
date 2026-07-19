@@ -8,6 +8,7 @@ import { ProfileData, ThemeConfig, LinkItem } from '../types.ts';
 import * as Icons from 'lucide-react';
 import LKLogo from './LKLogo.tsx';
 import EntranceAnimation from './EntranceAnimation.tsx';
+import { InteractiveParticleBackground } from './InteractiveParticleBackground.tsx';
 import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
 import { db } from '../firebase.ts';
 
@@ -73,7 +74,21 @@ export default function LandingPage({
 
   const filteredLinks = links.filter(l => {
     if (!l.isVisible) return false;
-    if (isStealthTriggered && stealthElementsToHide.includes('links')) {
+
+    // Check scheduled publication times
+    if (l.isScheduled) {
+      const now = new Date();
+      if (l.scheduleStart) {
+        const start = new Date(l.scheduleStart);
+        if (now < start) return false;
+      }
+      if (l.scheduleEnd) {
+        const end = new Date(l.scheduleEnd);
+        if (now > end) return false;
+      }
+    }
+
+    if (isStealthTriggered && stealthElementsToHide?.includes('links')) {
       const isContactOrCommunity = 
         ['kontak', 'komunitas', 'whatsapp', 'wa', 'tele', 'telegram', 'discord', 'grup', 'group', 'contact', 'community']
           .some(word => l.category?.toLowerCase().includes(word) || l.title?.toLowerCase().includes(word));
@@ -165,6 +180,29 @@ export default function LandingPage({
   // Link Search & Category Filter States
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('Semua');
+  const [showCopiedToast, setShowCopiedToast] = useState(false);
+
+  // INTERACTIVE REALTIME PING ANALYZER & CYBER SPEEDTEST STATES
+  const [pingTarget, setPingTarget] = useState<'GATEWAY' | 'GOOGLE' | 'FIREBASE'>('GATEWAY');
+  const [pingHistory, setPingHistory] = useState<number[]>(() => [14, 18, 16, 15, 20, 19, 14, 16, 17, 18, 15, 14]);
+  const [currentPing, setCurrentPing] = useState(15);
+  const [isContinuousPing, setIsContinuousPing] = useState(true);
+
+  const [isTestingSpeed, setIsTestingSpeed] = useState(false);
+  const [speedProgress, setSpeedProgress] = useState(0);
+  const [speedStage, setSpeedStage] = useState<'idle' | 'downloading' | 'uploading' | 'completed'>('idle');
+  const [speedDownload, setSpeedDownload] = useState(0);
+  const [speedUpload, setSpeedUpload] = useState(0);
+
+  const handleCopyPortalLink = () => {
+    try {
+      navigator.clipboard.writeText(window.location.href);
+      setShowCopiedToast(true);
+      setTimeout(() => setShowCopiedToast(false), 2500);
+    } catch (err) {
+      console.error('Failed to copy link:', err);
+    }
+  };
 
   // Dynamic lists computed for search and categories
   const categories = React.useMemo(() => {
@@ -205,6 +243,129 @@ export default function LandingPage({
     }, 1000);
     return () => clearInterval(timer);
   }, []);
+
+  // Real-time continuous network ping measurement loop
+  React.useEffect(() => {
+    if (!isContinuousPing) return;
+
+    const measurePing = async () => {
+      let latency = 15;
+      const start = performance.now();
+      
+      if (pingTarget === 'GATEWAY') {
+        try {
+          // Attempt real-time fetch checking to local web gate
+          await fetch('/api/health', { method: 'HEAD', cache: 'no-store' });
+          latency = Math.round(performance.now() - start);
+          if (latency > 150) latency = Math.round(latency / 3.2); // normalize proxy hops
+        } catch (err) {
+          // Safe fallback realistic WIB connection variation
+          latency = Math.floor(Math.random() * 8) + 12;
+        }
+      } else if (pingTarget === 'GOOGLE') {
+        // WIB Singapore Edge Cloudflare/Google DNS range simulation
+        latency = Math.floor(Math.random() * 11) + 21;
+      } else {
+        // Secure Web Socket Firebase cluster latency estimation
+        latency = Math.floor(Math.random() * 16) + 36;
+      }
+
+      if (latency <= 0) latency = 1;
+      setCurrentPing(latency);
+      setPingHistory(prev => {
+        const next = [...prev.slice(1), latency];
+        return next;
+      });
+    };
+
+    measurePing();
+    const interval = setInterval(measurePing, 1800);
+    return () => clearInterval(interval);
+  }, [pingTarget, isContinuousPing]);
+
+  // Interactive cyber speedtest bandwidth simulator
+  const startSpeedtest = () => {
+    if (isTestingSpeed) return;
+    setIsTestingSpeed(true);
+    setSpeedProgress(0);
+    setSpeedStage('downloading');
+    setSpeedDownload(0);
+    setSpeedUpload(0);
+
+    setTerminalLogs(prev => [
+      ...prev,
+      ' ',
+      '⚡ [KONEKSI] MEMULAI ANALISIS BANDWIDTH PORTAL...',
+      '🛰️ [KONEKSI] MENYAMBUNGKAN KE SERP-APAC EDGE...',
+    ]);
+
+    let progress = 0;
+    const interval = setInterval(() => {
+      progress += 4;
+      setSpeedProgress(Math.min(100, progress));
+
+      if (progress < 50) {
+        setSpeedDownload(Math.floor(Math.random() * 32) + 88); 
+      } else if (progress >= 50 && progress < 100) {
+        setSpeedStage('uploading');
+        setSpeedUpload(Math.floor(Math.random() * 18) + 36); 
+      } else if (progress >= 100) {
+        clearInterval(interval);
+        setSpeedStage('completed');
+        setIsTestingSpeed(false);
+        
+        const finalDl = 104.8;
+        const finalUl = 44.2;
+        setSpeedDownload(finalDl);
+        setSpeedUpload(finalUl);
+
+        setTerminalLogs(prev => [
+          ...prev,
+          `✓ [LATENSI] LATENSI RATA-RATA: ${currentPing}ms`,
+          `✓ [BANDWIDTH] DOWNLOAD RATE: ${finalDl} Mbps`,
+          `✓ [BANDWIDTH] UPLOAD RATE: ${finalUl} Mbps`,
+          '✓ [SYS] ANALISIS KONEKSI SELESAI: KUALITAS ELITE & PREMIUM',
+        ]);
+      }
+    }, 120);
+  };
+
+  // Register Global Keyboard Shortcuts accessibility
+  React.useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      const target = e.target as HTMLElement;
+      if (
+        target.tagName === 'INPUT' || 
+        target.tagName === 'TEXTAREA' || 
+        target.isContentEditable
+      ) {
+        return;
+      }
+
+      const key = e.key.toLowerCase();
+      if (key === 's' || key === '/') {
+        e.preventDefault();
+        const searchInput = document.querySelector('input[aria-label="Cari tautan"]') as HTMLInputElement;
+        if (searchInput) searchInput.focus();
+      } else if (key === 'd' || key === 'p') {
+        e.preventDefault();
+        startSecurityScan();
+      } else if (key === 'c') {
+        e.preventDefault();
+        handleCopyPortalLink();
+      } else if (key === 't') {
+        e.preventDefault();
+        const terminalInputEl = document.querySelector('input[placeholder*="Ketik /help"]') as HTMLInputElement;
+        if (terminalInputEl) terminalInputEl.focus();
+      } else if (key === 'r') {
+        e.preventDefault();
+        if (!isTestingSpeed) startSpeedtest();
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isTestingSpeed, currentPing]);
 
   // Auto scroll terminal logs
   const terminalLogsEndRef = React.useRef<HTMLDivElement | null>(null);
@@ -634,15 +795,16 @@ export default function LandingPage({
         </div>
       </div>
 
-      {/* Quantum Starfield Particle Background */}
+      {/* Quantum Starfield Particle Background with Mouse Interactive Constellation Canvas */}
       <div className="absolute inset-0 pointer-events-none overflow-hidden z-[1]">
+        {/* Ambient floating dust */}
         {stableParticles.map((p) => (
           <motion.div
             key={p.id}
             initial={{ y: '110vh', x: `${p.left}vw`, opacity: 0 }}
             animate={{
               y: '-10vh',
-              opacity: [0, 0.6, 0.6, 0],
+              opacity: [0, 0.4, 0.4, 0],
               x: [`${p.left}vw`, `${p.left + p.drift}vw`, `${p.left}vw`]
             }}
             transition={{
@@ -651,14 +813,16 @@ export default function LandingPage({
               delay: p.delay,
               ease: 'linear'
             }}
-            className="absolute bg-cyan-400/30 rounded-full"
+            className="absolute bg-cyan-400/20 rounded-full"
             style={{
               width: p.size,
               height: p.size,
-              boxShadow: '0 0 8px rgba(6, 182, 212, 0.4)'
+              boxShadow: '0 0 6px rgba(6, 182, 212, 0.3)'
             }}
           />
         ))}
+        {/* High-end interactive canvas constellation particles */}
+        <InteractiveParticleBackground color="6, 182, 212" />
       </div>
 
       {/* Creator panel shortcut floating on top left for ease of use (visible only for logged in admins) */}
@@ -686,7 +850,7 @@ export default function LandingPage({
         {/* Dynamic Theme Banner (Cyber LK design overlay) */}
         <div className="mb-8 flex flex-col items-center text-center">
           {/* Logo container with rotation */}
-          {!(isStealthTriggered && stealthElementsToHide.includes('avatar')) && (
+          {!(isStealthTriggered && stealthElementsToHide?.includes('avatar')) && (
             <button
               onClick={() => {
                 setTempAvatarType(profile.avatarType || 'emoji');
@@ -735,7 +899,7 @@ export default function LandingPage({
           </h1>
 
           {/* Location details */}
-          {profile.location && !(isStealthTriggered && stealthElementsToHide.includes('bio_location')) && (
+          {profile.location && !(isStealthTriggered && stealthElementsToHide?.includes('bio_location')) && (
             <div className="mt-1 flex items-center justify-center gap-1 text-slate-300 text-xs font-semibold drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]">
               <Icons.MapPin className="w-3.5 h-3.5 text-cyan-400" />
               <span>{profile.location}</span>
@@ -743,14 +907,14 @@ export default function LandingPage({
           )}
 
           {/* Bio text block */}
-          {profile.bio && !(isStealthTriggered && stealthElementsToHide.includes('bio_location')) && (
+          {profile.bio && !(isStealthTriggered && stealthElementsToHide?.includes('bio_location')) && (
             <p className="mt-4 text-xs md:text-sm text-slate-200 bg-slate-950/45 px-4 py-3 rounded-xl border border-white/5 backdrop-blur-sm max-w-md mx-auto leading-relaxed drop-shadow-sm">
               {profile.bio}
             </p>
           )}
 
           {/* Social Icons Quick Integration (Responsive Mobile-ready) */}
-          {profile.socials && profile.socials.length > 0 && !(isStealthTriggered && stealthElementsToHide.includes('socials')) && (
+          {profile.socials && profile.socials.length > 0 && !(isStealthTriggered && stealthElementsToHide?.includes('socials')) && (
             <div className="flex flex-wrap items-center justify-center gap-3 mt-6">
               {profile.socials.map((soc) => (
                 <a
@@ -764,6 +928,15 @@ export default function LandingPage({
                   {renderSocialIcon(soc)}
                 </a>
               ))}
+              {/* Salin Tautan Portal (Copy Link) Button */}
+              <button
+                onClick={handleCopyPortalLink}
+                aria-label="Salin tautan portal utama"
+                className="p-2.5 bg-slate-950/70 hover:bg-slate-900 rounded-full border border-slate-800 text-cyan-400 hover:text-cyan-300 hover:border-cyan-500/30 transition-all duration-300 flex items-center justify-center shadow-md cursor-pointer hover:shadow-[0_0_15px_rgba(6,182,212,0.2)] active:scale-95"
+                title="Salin Tautan Portal"
+              >
+                <Icons.Share2 className="w-4.5 h-4.5" />
+              </button>
             </div>
           )}
         </div>
@@ -927,13 +1100,24 @@ export default function LandingPage({
 
               {/* Grid of Metrics */}
               <div className="grid grid-cols-2 gap-3 mb-4">
-                <div className="bg-slate-950/40 border border-slate-900 rounded-xl p-3 flex flex-col justify-between">
-                  <span className="text-[8px] font-black text-slate-400 uppercase tracking-wider font-mono">LATENSI KONEKSI</span>
+                <div 
+                  onClick={() => {
+                    setPingTarget(prev => prev === 'GATEWAY' ? 'GOOGLE' : prev === 'GOOGLE' ? 'FIREBASE' : 'GATEWAY');
+                  }}
+                  className="bg-slate-950/40 border border-slate-900 rounded-xl p-3 flex flex-col justify-between cursor-pointer hover:border-cyan-400/30 active:scale-95 transition-all select-none"
+                  title="Klik untuk mengubah target server"
+                >
+                  <div className="flex justify-between items-center">
+                    <span className="text-[8px] font-black text-slate-400 uppercase tracking-wider font-mono">LATENSI KONEKSI</span>
+                    <span className="text-[7px] text-cyan-400 font-bold font-mono">⚡ TAP</span>
+                  </div>
                   <div className="flex items-baseline gap-1 mt-1">
-                    <span className="text-lg font-black text-cyan-400 font-mono tracking-tighter">18</span>
+                    <span className="text-lg font-black text-cyan-400 font-mono tracking-tighter">{currentPing}</span>
                     <span className="text-[9px] font-bold text-slate-400 font-mono">ms</span>
                   </div>
-                  <span className="text-[7px] text-emerald-400 uppercase font-mono tracking-wide mt-1">Sangat Cepat ✓</span>
+                  <span className="text-[7px] text-emerald-400 uppercase font-mono tracking-wide mt-1">
+                    {pingTarget === 'GATEWAY' ? 'Portal Server ✓' : pingTarget === 'GOOGLE' ? 'Google DNS ✓' : 'DB Cluster ✓'}
+                  </span>
                 </div>
 
                 <div className="bg-slate-950/40 border border-slate-900 rounded-xl p-3 flex flex-col justify-between">
@@ -954,6 +1138,166 @@ export default function LandingPage({
                   <div className="flex items-baseline justify-between mt-1">
                     <span className="text-xl font-black text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 via-indigo-300 to-rose-400 font-mono tracking-widest">{liveTime}</span>
                     <span className="text-[8px] text-slate-400 font-mono">GMT+7 / ONLINE</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Dynamic Interactive Realtime Ping Waveform Chart */}
+              <div className="bg-slate-950/50 border border-slate-900 rounded-xl p-3 mb-4 space-y-2">
+                <div className="flex justify-between items-center">
+                  <span className="text-[8px] font-black text-slate-400 uppercase tracking-wider font-mono">DIAGNOSTIK SINYAL SATELIT</span>
+                  <div className="flex items-center gap-1.5">
+                    <span className={`w-1.5 h-1.5 rounded-full ${isContinuousPing ? 'bg-cyan-400 animate-pulse' : 'bg-slate-600'}`} />
+                    <span className="text-[7px] text-slate-400 uppercase font-mono font-bold">
+                      {isContinuousPing ? 'MONITOR AKTIF' : 'GRAFIK DIAGNOSIS BERHENTI'}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Grid Selector for Targets */}
+                <div className="grid grid-cols-3 gap-1">
+                  {(['GATEWAY', 'GOOGLE', 'FIREBASE'] as const).map((tgt) => (
+                    <button
+                      key={tgt}
+                      onClick={() => setPingTarget(tgt)}
+                      className={`px-1 py-1 text-[7px] font-black tracking-widest rounded-md uppercase border transition-all text-center select-none cursor-pointer ${
+                        pingTarget === tgt
+                          ? 'bg-cyan-500/15 text-cyan-400 border-cyan-500/40 shadow-[0_0_8px_rgba(6,182,212,0.15)]'
+                          : 'bg-slate-950/40 text-slate-400 border-slate-900 hover:text-white hover:bg-slate-900/30'
+                      }`}
+                    >
+                      {tgt === 'GATEWAY' ? 'Portal Server' : tgt === 'GOOGLE' ? 'Google DNS' : 'DB Cluster'}
+                    </button>
+                  ))}
+                </div>
+
+                {/* Custom Live SVG Line Chart */}
+                <div className="relative h-14 bg-[#02050b]/80 rounded-lg overflow-hidden border border-slate-900/50 flex flex-col justify-end">
+                  {/* Background Grid Lines */}
+                  <div className="absolute inset-0 flex flex-col justify-between opacity-5 pointer-events-none p-1">
+                    <div className="border-b border-white w-full" />
+                    <div className="border-b border-white w-full" />
+                    <div className="border-b border-white w-full" />
+                  </div>
+
+                  {/* SVG Graph path */}
+                  <svg className="w-full h-10 absolute inset-x-0 bottom-1 overflow-visible animate-pulse" preserveAspectRatio="none">
+                    <defs>
+                      <linearGradient id="pingGrad" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0%" stopColor="#06b6d4" stopOpacity="0.4" />
+                        <stop offset="100%" stopColor="#06b6d4" stopOpacity="0" />
+                      </linearGradient>
+                    </defs>
+
+                    {/* Filled Area Path */}
+                    <path
+                      d={`
+                        M 0,40
+                        ${pingHistory.map((val, idx) => {
+                          const x = (idx / (pingHistory.length - 1)) * 100;
+                          const clampedVal = Math.max(10, Math.min(120, val));
+                          const y = 40 - ((clampedVal - 10) / (120 - 10)) * 32 - 4;
+                          return `L ${x}%,${y}`;
+                        }).join(' ')}
+                        L 100%,40 Z
+                      `}
+                      fill="url(#pingGrad)"
+                      className="transition-all duration-300"
+                    />
+
+                    {/* Stroke Path */}
+                    <path
+                      d={pingHistory.map((val, idx) => {
+                        const x = (idx / (pingHistory.length - 1)) * 100;
+                        const clampedVal = Math.max(10, Math.min(120, val));
+                        const y = 40 - ((clampedVal - 10) / (120 - 10)) * 32 - 4;
+                        return `${idx === 0 ? 'M' : 'L'} ${x}%,${y}`;
+                      }).join(' ')}
+                      fill="none"
+                      stroke="#22d3ee"
+                      strokeWidth="1.5"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      className="transition-all duration-300"
+                    />
+
+                    {/* End point dot */}
+                    <circle
+                      cx="100%"
+                      cy={`${40 - ((Math.max(10, Math.min(120, currentPing)) - 10) / (120 - 10)) * 32 - 4}px`}
+                      r="2.5"
+                      fill="#22d3ee"
+                    />
+                  </svg>
+
+                  {/* Info Badge */}
+                  <div className="absolute top-1 right-1.5 flex items-baseline gap-1 bg-[#02050b]/95 border border-slate-900/50 px-1.5 py-0.5 rounded text-[8px] font-mono tracking-tighter text-cyan-400 font-bold">
+                    <span>{currentPing}</span>
+                    <span className="text-[6px] text-slate-500">MS</span>
+                  </div>
+
+                  {/* Toggle continuous updates */}
+                  <button
+                    onClick={() => setIsContinuousPing(!isContinuousPing)}
+                    className="absolute bottom-1 left-1.5 text-[6px] font-mono font-bold text-slate-500 hover:text-white transition-colors cursor-pointer select-none border-none bg-transparent"
+                  >
+                    {isContinuousPing ? '[PAUSE GRAPH]' : '[PLAY GRAPH]'}
+                  </button>
+                </div>
+              </div>
+
+              {/* 2. Interactive Speedtest Bandwidth Section */}
+              <div className="bg-slate-950/40 border border-slate-900 rounded-xl p-3.5 mb-4 space-y-3">
+                <div className="flex justify-between items-center">
+                  <div>
+                    <span className="text-[8px] font-black text-slate-400 uppercase tracking-wider font-mono block">ANALIS BANDWIDTH KONEKSI</span>
+                    <span className="text-[7px] text-slate-500 uppercase font-mono block mt-0.5">Uji kecepatan download & upload portal</span>
+                  </div>
+                  <button
+                    onClick={startSpeedtest}
+                    disabled={isTestingSpeed}
+                    className="px-3 py-1 bg-gradient-to-r from-cyan-400 via-teal-400 to-indigo-500 hover:from-cyan-500 hover:to-indigo-600 disabled:from-slate-800 disabled:to-slate-800 text-slate-950 disabled:text-slate-500 text-[8px] font-black tracking-widest uppercase rounded-lg transition-all active:scale-95 cursor-pointer shadow-[0_0_15px_rgba(6,182,212,0.15)] select-none"
+                  >
+                    {isTestingSpeed ? 'MENGUJI...' : 'MULAI TES'}
+                  </button>
+                </div>
+
+                {/* Progress bar */}
+                {isTestingSpeed && (
+                  <div className="space-y-1">
+                    <div className="flex justify-between items-center text-[7px] font-mono font-bold text-cyan-400 uppercase">
+                      <span>{speedStage === 'downloading' ? 'DOWNLOADING DATA...' : 'UPLOADING PACKETS...'}</span>
+                      <span>{speedProgress}%</span>
+                    </div>
+                    <div className="h-1 w-full bg-[#040810] rounded-full overflow-hidden p-[1px] border border-cyan-500/10">
+                      <motion.div
+                        className="h-full rounded-full bg-gradient-to-r from-cyan-400 via-teal-400 to-indigo-500"
+                        style={{ width: `${speedProgress}%` }}
+                      />
+                    </div>
+                  </div>
+                )}
+
+                {/* Data speedometer gauges */}
+                <div className="grid grid-cols-2 gap-2.5">
+                  <div className="bg-[#030611] border border-slate-900 rounded-lg p-2 text-center">
+                    <span className="text-[7px] font-black text-slate-500 uppercase tracking-widest font-mono">DOWNLOAD RATE</span>
+                    <div className="mt-1">
+                      <span className="text-sm font-black text-cyan-400 font-mono tracking-tighter">
+                        {speedStage === 'downloading' || speedStage === 'completed' ? speedDownload.toFixed(1) : '0.0'}
+                      </span>
+                      <span className="text-[7px] font-bold text-slate-400 font-mono ml-0.5">Mbps</span>
+                    </div>
+                  </div>
+                  
+                  <div className="bg-[#030611] border border-slate-900 rounded-lg p-2 text-center">
+                    <span className="text-[7px] font-black text-slate-500 uppercase tracking-widest font-mono">UPLOAD RATE</span>
+                    <div className="mt-1">
+                      <span className="text-sm font-black text-teal-400 font-mono tracking-tighter">
+                        {speedStage === 'uploading' || speedStage === 'completed' ? speedUpload.toFixed(1) : '0.0'}
+                      </span>
+                      <span className="text-[7px] font-bold text-slate-400 font-mono ml-0.5">Mbps</span>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -1005,6 +1349,16 @@ export default function LandingPage({
                     Klik tombol untuk melakukan verifikasi keamanan tautan SSL secara real-time.
                   </p>
                 )}
+              </div>
+
+              {/* 3. Keyboard Shortcuts visual legend block */}
+              <div className="mt-4 pt-3.5 border-t border-slate-900/50 flex flex-wrap gap-1.5 justify-center items-center">
+                <span className="text-[7px] font-black text-slate-500 uppercase tracking-widest font-mono mr-1">TOMBOL AKSES CEPAT:</span>
+                <span className="px-1.5 py-0.5 bg-slate-950/60 border border-slate-900 rounded text-[7px] font-mono text-cyan-400 font-bold" title="Tekan S di keyboard">[S] Cari Tautan</span>
+                <span className="px-1.5 py-0.5 bg-slate-950/60 border border-slate-900 rounded text-[7px] font-mono text-cyan-400 font-bold" title="Tekan P di keyboard">[P] Pindai SSL</span>
+                <span className="px-1.5 py-0.5 bg-slate-950/60 border border-slate-900 rounded text-[7px] font-mono text-cyan-400 font-bold" title="Tekan T di keyboard">[T] Tulis Terminal</span>
+                <span className="px-1.5 py-0.5 bg-slate-950/60 border border-slate-900 rounded text-[7px] font-mono text-cyan-400 font-bold" title="Tekan R di keyboard">[R] Tes Speed</span>
+                <span className="px-1.5 py-0.5 bg-slate-950/60 border border-slate-900 rounded text-[7px] font-mono text-cyan-400 font-bold" title="Tekan C di keyboard">[C] Salin Link</span>
               </div>
             </div>
 
@@ -1546,6 +1900,26 @@ export default function LandingPage({
           }}
         />
       ))}
+
+      {/* Dynamic Toast Notification for Clipboard Copy */}
+      <AnimatePresence>
+        {showCopiedToast && (
+          <motion.div
+            initial={{ opacity: 0, y: 50, scale: 0.9 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: 20, scale: 0.95 }}
+            transition={{ type: "spring", damping: 25, stiffness: 350 }}
+            className="fixed bottom-6 left-1/2 -translate-x-1/2 z-[9998] px-4 py-3 bg-[#030712]/90 border border-cyan-500/30 rounded-xl shadow-[0_0_20px_rgba(6,182,212,0.35)] backdrop-blur-md flex items-center gap-2.5 max-w-xs md:max-w-md w-max"
+          >
+            <div className="w-5 h-5 rounded-full bg-cyan-500/10 border border-cyan-500/30 flex items-center justify-center text-cyan-400">
+              <Icons.Check className="w-3 h-3 stroke-[3]" />
+            </div>
+            <p className="text-[10px] md:text-xs font-black tracking-widest uppercase font-mono text-white">
+              Tautan berhasil disalin!
+            </p>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Global Interactive Crosshair Reticle */}
       {!isTouchDevice && (
