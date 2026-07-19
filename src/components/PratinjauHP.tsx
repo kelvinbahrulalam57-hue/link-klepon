@@ -8,7 +8,6 @@ import { ProfileData, ThemeConfig, LinkItem } from '../types.ts';
 import * as Icons from 'lucide-react';
 import { motion } from 'motion/react';
 import LKLogo from './LKLogo.tsx';
-import ChiptuneSynthPlayer from './ChiptuneSynthPlayer.tsx';
 
 interface PratinjauHPProps {
   profile: ProfileData;
@@ -377,11 +376,6 @@ export default function PratinjauHP({
                 <p className="text-[9px] text-slate-500 italic py-10">Tautan Kosong atau Dinonaktifkan</p>
               )}
             </motion.div>
-
-            {/* Simulated Chiptune Synthesizer Music Player inside Mockup */}
-            <div className="scale-90 origin-top">
-              <ChiptuneSynthPlayer />
-            </div>
           </div>
 
           {/* Footer inside mobile device */}

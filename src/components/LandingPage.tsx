@@ -11,7 +11,6 @@ import EntranceAnimation from './EntranceAnimation.tsx';
 import { InteractiveParticleBackground } from './InteractiveParticleBackground.tsx';
 import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
 import { db } from '../firebase.ts';
-import ChiptuneSynthPlayer from './ChiptuneSynthPlayer.tsx';
 
 import { motion, AnimatePresence } from 'motion/react';
 
@@ -1373,9 +1372,6 @@ export default function LandingPage({
         {/* Review / Suggestion Box Form Card */}
         {!(isStealthTriggered && stealthElementsToHide.includes('widgets')) && (
           <>
-            {/* Realtime Synthwave Background Music Player */}
-            <ChiptuneSynthPlayer />
-
             <div className="w-full max-w-md mt-12 bg-slate-950/65 border border-cyan-500/20 p-5 rounded-2xl backdrop-blur-md shadow-[0_0_25px_rgba(6,182,212,0.1)] relative text-left">
               {/* Cyber retro decorative element */}
               <div className="absolute top-0 inset-x-0 h-[2px] bg-gradient-to-r from-cyan-500 via-indigo-500 to-cyan-500 rounded-t-2xl" />
