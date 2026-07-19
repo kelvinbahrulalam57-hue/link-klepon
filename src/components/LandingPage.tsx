@@ -186,6 +186,18 @@ export default function LandingPage({
     });
   }, [filteredLinks, searchQuery, selectedCategory]);
 
+  // Stable memoized background particles for elite render performance and 100% FPS stability
+  const stableParticles = React.useMemo(() => {
+    return Array.from({ length: 18 }).map((_, i) => {
+      const size = Math.floor(Math.random() * 3) + 2;
+      const left = Math.floor(Math.random() * 100);
+      const delay = Math.random() * 8;
+      const duration = Math.random() * 14 + 10;
+      const drift = Math.random() * 4 - 2;
+      return { id: i, size, left, delay, duration, drift };
+    });
+  }, []);
+
   React.useEffect(() => {
     const timer = setInterval(() => {
       setLiveTime(new Date().toLocaleTimeString('id-ID'));
@@ -624,35 +636,29 @@ export default function LandingPage({
 
       {/* Quantum Starfield Particle Background */}
       <div className="absolute inset-0 pointer-events-none overflow-hidden z-[1]">
-        {Array.from({ length: 18 }).map((_, i) => {
-          const size = Math.floor(Math.random() * 3) + 2;
-          const left = Math.floor(Math.random() * 100);
-          const delay = Math.random() * 8;
-          const duration = Math.random() * 14 + 10;
-          return (
-            <motion.div
-              key={i}
-              initial={{ y: '110vh', x: `${left}vw`, opacity: 0 }}
-              animate={{
-                y: '-10vh',
-                opacity: [0, 0.6, 0.6, 0],
-                x: [`${left}vw`, `${left + (Math.random() * 4 - 2)}vw`, `${left}vw`]
-              }}
-              transition={{
-                duration,
-                repeat: Infinity,
-                delay,
-                ease: 'linear'
-              }}
-              className="absolute bg-cyan-400/30 rounded-full"
-              style={{
-                width: size,
-                height: size,
-                boxShadow: '0 0 8px rgba(6, 182, 212, 0.4)'
-              }}
-            />
-          );
-        })}
+        {stableParticles.map((p) => (
+          <motion.div
+            key={p.id}
+            initial={{ y: '110vh', x: `${p.left}vw`, opacity: 0 }}
+            animate={{
+              y: '-10vh',
+              opacity: [0, 0.6, 0.6, 0],
+              x: [`${p.left}vw`, `${p.left + p.drift}vw`, `${p.left}vw`]
+            }}
+            transition={{
+              duration: p.duration,
+              repeat: Infinity,
+              delay: p.delay,
+              ease: 'linear'
+            }}
+            className="absolute bg-cyan-400/30 rounded-full"
+            style={{
+              width: p.size,
+              height: p.size,
+              boxShadow: '0 0 8px rgba(6, 182, 212, 0.4)'
+            }}
+          />
+        ))}
       </div>
 
       {/* Creator panel shortcut floating on top left for ease of use (visible only for logged in admins) */}
@@ -687,6 +693,7 @@ export default function LandingPage({
                 setTempAvatarValue(profile.avatarValue || '');
                 setShowAvatarEditorModal(true);
               }}
+              aria-label="Ganti foto profil"
               className="relative mb-6 cursor-pointer group outline-none focus:ring-2 focus:ring-cyan-400 rounded-full transition-transform active:scale-95"
               title="Klik untuk mengganti foto profil"
             >
@@ -703,7 +710,10 @@ export default function LandingPage({
                 ) : (profile.avatarType === 'link' || profile.avatarType === 'upload') && profile.avatarValue ? (
                   <img 
                     src={profile.avatarValue} 
-                    alt={profile.name} 
+                    alt={profile.name || 'Foto Profil'} 
+                    width="96"
+                    height="96"
+                    loading="lazy"
                     className="w-24 h-24 rounded-full object-cover border-2 border-white/20" 
                     referrerPolicy="no-referrer"
                   />
@@ -748,6 +758,7 @@ export default function LandingPage({
                   href={soc.url}
                   target="_blank"
                   rel="noopener noreferrer"
+                  aria-label={soc.platform ? `Ikuti Kelvin di ${soc.platform}` : 'Media Sosial'}
                   className={`p-2.5 bg-slate-950/70 hover:bg-slate-900 rounded-full border border-slate-800 text-slate-300 transition-all duration-300 flex items-center justify-center shadow-md ${getPlatformHoverColor(soc.platform)}`}
                 >
                   {renderSocialIcon(soc)}
@@ -765,13 +776,14 @@ export default function LandingPage({
               <div className="absolute inset-0 bg-gradient-to-r from-cyan-500/10 via-indigo-500/10 to-cyan-500/10 rounded-xl blur-md group-focus-within:opacity-100 opacity-60 transition-opacity" />
               <div className="relative bg-[#050914]/80 border border-slate-800 focus-within:border-cyan-500/50 rounded-xl p-[1px] transition-all">
                 <div className="flex items-center gap-2.5 px-3 py-2.5">
-                  <Icons.Search className="w-4 h-4 text-slate-500 group-focus-within:text-cyan-400 transition-colors" />
+                  <Icons.Search className="w-4 h-4 text-slate-400 group-focus-within:text-cyan-400 transition-colors" />
                   <input
                     type="text"
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                     placeholder="Cari tautan..."
-                    className="flex-1 bg-transparent text-xs text-white focus:outline-none placeholder:text-slate-600 font-medium"
+                    aria-label="Cari tautan"
+                    className="flex-1 bg-transparent text-xs text-white focus:outline-none placeholder:text-slate-500 font-medium"
                   />
                   {searchQuery && (
                     <button
@@ -835,7 +847,10 @@ export default function LandingPage({
                   {link.imageType === 'upload' && link.imageValue ? (
                     <img 
                       src={link.imageValue} 
-                      alt="" 
+                      alt={link.title || 'Ikon tautan'} 
+                      width="24"
+                      height="24"
+                      loading="lazy"
                       className="w-5 h-5 md:w-6 md:h-6 rounded-md object-cover border border-white/20" 
                       referrerPolicy="no-referrer"
                       onError={(e) => {
@@ -901,7 +916,7 @@ export default function LandingPage({
                   </div>
                   <div>
                     <h4 className="text-xs font-black tracking-wider text-cyan-400 uppercase font-gaming">SISTEM KENDALI METRIK</h4>
-                    <p className="text-[8px] text-slate-500 uppercase font-mono tracking-widest">LIVE SERVER OVERWATCH v4.2</p>
+                    <p className="text-[8px] text-slate-400 uppercase font-mono tracking-widest">LIVE SERVER OVERWATCH v4.2</p>
                   </div>
                 </div>
                 <div className="flex items-center gap-1.5 text-[9px] font-bold font-mono text-emerald-400 bg-emerald-950/40 border border-emerald-500/20 px-2 py-0.5 rounded-full">
@@ -913,7 +928,7 @@ export default function LandingPage({
               {/* Grid of Metrics */}
               <div className="grid grid-cols-2 gap-3 mb-4">
                 <div className="bg-slate-950/40 border border-slate-900 rounded-xl p-3 flex flex-col justify-between">
-                  <span className="text-[8px] font-black text-slate-500 uppercase tracking-wider font-mono">LATENSI KONEKSI</span>
+                  <span className="text-[8px] font-black text-slate-400 uppercase tracking-wider font-mono">LATENSI KONEKSI</span>
                   <div className="flex items-baseline gap-1 mt-1">
                     <span className="text-lg font-black text-cyan-400 font-mono tracking-tighter">18</span>
                     <span className="text-[9px] font-bold text-slate-400 font-mono">ms</span>
@@ -922,7 +937,7 @@ export default function LandingPage({
                 </div>
 
                 <div className="bg-slate-950/40 border border-slate-900 rounded-xl p-3 flex flex-col justify-between">
-                  <span className="text-[8px] font-black text-slate-500 uppercase tracking-wider font-mono">PENGUNJUNG AKTIF</span>
+                  <span className="text-[8px] font-black text-slate-400 uppercase tracking-wider font-mono">PENGUNJUNG AKTIF</span>
                   <div className="flex items-baseline gap-1 mt-1">
                     <span className="text-lg font-black text-rose-400 font-mono tracking-tighter">{liveVisitorCount}</span>
                     <span className="text-[9px] font-bold text-slate-400 font-mono">user</span>
@@ -933,7 +948,7 @@ export default function LandingPage({
                 {/* Jam Digital Satelit HUD */}
                 <div className="bg-slate-950/40 border border-slate-900 rounded-xl p-3 flex flex-col justify-between col-span-2">
                   <div className="flex justify-between items-center">
-                    <span className="text-[8px] font-black text-slate-500 uppercase tracking-wider font-mono">JAM SATELIT (WIB / LOCAL)</span>
+                    <span className="text-[8px] font-black text-slate-400 uppercase tracking-wider font-mono">JAM SATELIT (WIB / LOCAL)</span>
                     <span className="text-[7px] text-indigo-400 uppercase font-mono tracking-wider font-bold">UPTIME: {systemUptime}s</span>
                   </div>
                   <div className="flex items-baseline justify-between mt-1">
@@ -986,7 +1001,7 @@ export default function LandingPage({
                 )}
 
                 {!isScanning && !scanFinished && (
-                  <p className="text-[8px] text-slate-500 uppercase font-mono leading-relaxed">
+                  <p className="text-[8px] text-slate-400 uppercase font-mono leading-relaxed">
                     Klik tombol untuk melakukan verifikasi keamanan tautan SSL secara real-time.
                   </p>
                 )}
@@ -1036,13 +1051,14 @@ export default function LandingPage({
                 <form onSubmit={handleFeedbackSubmit} className="space-y-3.5">
                   {/* Name / Contact input */}
                   <div className="space-y-1">
-                    <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest block">NAMA / SOCIAL MEDIA TAG (OPSIONAL)</label>
+                    <label htmlFor="feedbackName" className="text-[9px] font-black text-slate-400 uppercase tracking-widest block">NAMA / SOCIAL MEDIA TAG (OPSIONAL)</label>
                     <input
+                      id="feedbackName"
                       type="text"
                       value={feedbackName}
                       onChange={(e) => setFeedbackName(e.target.value)}
                       placeholder="Contoh: Kelvin / @kelvin57"
-                      className="w-full bg-[#070b13]/80 border-2 border-slate-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-cyan-500/80 transition-all placeholder:text-slate-600"
+                      className="w-full bg-[#070b13]/80 border-2 border-slate-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-cyan-500/80 transition-all placeholder:text-slate-500"
                     />
                   </div>
 
@@ -1050,13 +1066,14 @@ export default function LandingPage({
 
                   {/* Suggestion Textarea */}
                   <div className="space-y-1">
-                    <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest block">ULASAN / SARAN ANDA</label>
+                    <label htmlFor="feedbackText" className="text-[9px] font-black text-slate-400 uppercase tracking-widest block">ULASAN / SARAN ANDA</label>
                     <textarea
+                      id="feedbackText"
                       rows={3}
                       value={feedbackText}
                       onChange={(e) => setFeedbackText(e.target.value)}
                       placeholder="Tuliskan masukan atau ulasan Anda di sini..."
-                      className="w-full bg-[#070b13]/80 border-2 border-slate-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-cyan-500/80 transition-all placeholder:text-slate-600 resize-none"
+                      className="w-full bg-[#070b13]/80 border-2 border-slate-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-cyan-500/80 transition-all placeholder:text-slate-500 resize-none"
                     />
                   </div>
 
@@ -1100,11 +1117,11 @@ export default function LandingPage({
       </div>
 
       {/* Global public footer */}
-      <footer className="relative z-10 text-center text-[9px] text-slate-500 font-bold pt-8 mt-12 border-t border-white/5 uppercase tracking-[0.2em] select-none">
+      <footer className="relative z-10 text-center text-[9px] text-slate-400 font-bold pt-8 mt-12 border-t border-white/5 uppercase tracking-[0.2em] select-none">
         PLAY • CONNECT • DOMINATE
         <span 
           onClick={handleFooterClick}
-          className="block text-[8px] text-slate-600 hover:text-cyan-500/50 font-semibold tracking-normal mt-1 lowercase cursor-pointer transition-colors active:scale-95"
+          className="block text-[8px] text-slate-400/85 hover:text-cyan-400 font-semibold tracking-normal mt-1 lowercase cursor-pointer transition-colors active:scale-95"
           title="Area Tersembunyi"
         >
           crafted by admin klepon 
