@@ -51,8 +51,21 @@ export default function App() {
   }, [appState]);
 
   const setAppState = (updater: AppState | ((prev: AppState) => AppState)) => {
-    lastLocalEdit.current = Date.now();
-    rawSetAppState(updater);
+    const now = Date.now();
+    lastLocalEdit.current = now;
+    rawSetAppState((prev) => {
+      const nextState = typeof updater === 'function' ? updater(prev) : updater;
+      const nextWithTime = {
+        ...nextState,
+        updatedAt: now
+      };
+      try {
+        localStorage.setItem('link_klepon_db_v1', JSON.stringify(nextWithTime));
+      } catch (e) {
+        console.error("LocalStorage write error:", e);
+      }
+      return nextWithTime;
+    });
   };
 
   // 1. Listen to real-time updates from Firestore on mount
@@ -62,14 +75,30 @@ export default function App() {
     
     const unsubscribe = onSnapshot(docRef, (docSnap) => {
       if (!active) return;
+
+      // GUARD 1: Prevent overwriting active local user edits (edited within last 3.5 seconds)
+      if (Date.now() - lastLocalEdit.current < 3500) {
+        return;
+      }
+
       if (docSnap.exists()) {
         const data = docSnap.data();
         if (data && data.state) {
-          const currentStr = JSON.stringify(stateRef.current);
-          const incomingStr = JSON.stringify(data.state);
+          const remoteState = data.state as AppState;
+          const localState = stateRef.current;
+
+          // GUARD 2: Compare updatedAt timestamp if present
+          if (remoteState.updatedAt && localState.updatedAt && remoteState.updatedAt <= localState.updatedAt) {
+            return;
+          }
+
+          const currentStr = JSON.stringify(localState);
+          const incomingStr = JSON.stringify(remoteState);
           if (currentStr !== incomingStr) {
-            rawSetAppState(data.state);
-            localStorage.setItem('link_klepon_db_v1', incomingStr);
+            rawSetAppState(remoteState);
+            try {
+              localStorage.setItem('link_klepon_db_v1', incomingStr);
+            } catch (e) {}
           }
         }
       } else {
@@ -77,7 +106,8 @@ export default function App() {
         import('./utils/image.ts').then(async ({ compressAppState }) => {
           if (!active) return;
           const optimized = await compressAppState(stateRef.current);
-          setDoc(docRef, { state: optimized }).catch((err) => {
+          const seedState = { ...optimized, updatedAt: Date.now() };
+          setDoc(docRef, { state: seedState }).catch((err) => {
             console.error("Firebase seed error:", err);
           });
         }).catch((err) => {
@@ -100,18 +130,16 @@ export default function App() {
       try {
         const { compressAppState } = await import('./utils/image.ts');
         const optimizedState = await compressAppState(appState);
-        const optimizedStr = JSON.stringify(optimizedState);
+        const stateToSave = {
+          ...optimizedState,
+          updatedAt: appState.updatedAt || Date.now()
+        };
+        const optimizedStr = JSON.stringify(stateToSave);
         
         localStorage.setItem('link_klepon_db_v1', optimizedStr);
         
-        // If optimization modified the state, update local React state
-        const currentStr = JSON.stringify(appState);
-        if (optimizedStr !== currentStr) {
-          rawSetAppState(optimizedState);
-        }
-
         const docRef = doc(db, 'app_state', 'current');
-        await setDoc(docRef, { state: optimizedState });
+        await setDoc(docRef, { state: stateToSave });
       } catch (err) {
         console.error("Firestore write error:", err);
       }

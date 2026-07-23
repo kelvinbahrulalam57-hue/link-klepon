@@ -74,4 +74,5 @@ export interface AppState {
   isStealthModeActive?: boolean;
   stealthAllowedLocation?: string;
   stealthElementsToHide?: string[];
+  updatedAt?: number;
 }
